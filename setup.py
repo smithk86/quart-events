@@ -11,6 +11,7 @@ setup(
     description='quart plugin to facilitate event messages',
     packages=['quart_events'],
     install_requires=[
+        'asyncio-multisubscriber-queue',
         'quart'
     ],
     setup_requires=[
