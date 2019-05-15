@@ -41,7 +41,6 @@ setup(
         'aiohttp'
     ],
     classifiers=[
-        'Framework :: Quart',
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Libraries :: Python Modules'
