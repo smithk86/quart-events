@@ -1,31 +1,26 @@
 import aiohttp
 import pytest
 
-from quart_events import EventBroker
-
 
 def pytest_addoption(parser):
     parser.addoption('--endpoint', default='http://localhost:5000')
 
 
-@pytest.fixture
-def endpoint(request):
-    return request.config.getoption('endpoint')
+@pytest.fixture(name='endpoint')
+@pytest.mark.asyncio
+async def _endpoint(request):
+    endpoint = request.config.getoption('endpoint')
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(endpoint) as r:
+                return endpoint
+    except aiohttp.ClientConnectorError:
+        raise Exception('plase run app.py before testing')
 
 
-@pytest.fixture
+@pytest.yield_fixture
 @pytest.mark.asyncio
 async def session(request, event_loop):
     s = aiohttp.ClientSession(loop=event_loop, raise_for_status=True)
-
-    def fin():
-        async def afin():
-            await s.close()
-        event_loop.run_until_complete(afin())
-    request.addfinalizer(fin)
-    return s
-
-
-@pytest.fixture
-async def event_broker(request, event_loop):
-    return EventBroker()
+    yield s
+    await s.close()

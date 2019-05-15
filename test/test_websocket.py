@@ -1,4 +1,3 @@
-import asyncio
 import json
 from asyncio import sleep
 
@@ -11,14 +10,11 @@ async def test_websocket(session, endpoint, event_loop):
     async def send():
         await sleep(.25)
         await session.get(f'{endpoint}/send/event0')
-        await sleep(.25)
         await session.get(f'{endpoint}/send/event1')
-        await sleep(.25)
         await session.get(f'{endpoint}/send/event2')
 
     # subscribe to events
-    tasks = list()
-    tasks.append(event_loop.create_task(send()))
+    task = event_loop.create_task(send())
 
     async with session.ws_connect(f'{endpoint}/events/ws') as ws:
         for i in range(3):
@@ -30,7 +26,7 @@ async def test_websocket(session, endpoint, event_loop):
                 raise Exception()
 
     # wait for send() to end
-    await asyncio.wait(tasks)
+    await task
 
 
 @pytest.mark.asyncio
@@ -40,8 +36,7 @@ async def test_websocket_events(session, endpoint, event_loop):
         await session.get(f'{endpoint}/generate')
 
     # subscribe to events
-    tasks = list()
-    tasks.append(event_loop.create_task(send()))
+    task = event_loop.create_task(send())
 
     events = list()
     async with session.ws_connect(f'{endpoint}/events/ws') as ws:
@@ -64,4 +59,4 @@ async def test_websocket_events(session, endpoint, event_loop):
     assert events[3]['event'] == 'test3'
 
     # wait for send() to end
-    await asyncio.wait(tasks)
+    await task
