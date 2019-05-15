@@ -7,7 +7,7 @@ from setuptools import setup
 
 dir_ = os.path.abspath(os.path.dirname(__file__))
 # get the version to include in setup()
-with open(f'{dir_}/quart-events/__init__.py') as fh:
+with open(f'{dir_}/quart_events/__init__.py') as fh:
     for line in fh:
         if '__version__' in line:
             exec(line)
@@ -28,6 +28,7 @@ setup(
     long_description_content_type='text/markdown',
     packages=['quart_events'],
     install_requires=[
+        'async-timeout',
         'asyncio-multisubscriber-queue',
         'quart'
     ],
