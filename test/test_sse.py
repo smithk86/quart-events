@@ -54,3 +54,17 @@ async def test_message_events(session, endpoint, event_loop):
 
     # wait for send()
     await task
+
+
+@pytest.mark.asyncio
+async def test_keepalive(session, endpoint, event_loop):
+    data = ''
+    async with session.get(f'{endpoint}/events/sse', headers={'Content-Type': 'text/event-stream'}) as r:
+        for _ in range(4):
+            s = await r.content.read(20)
+            data += s.decode('utf-8')
+    events = data.split('\n\n')
+
+    # assert event values
+    for i in range(4):
+        assert "event: keepalive" in events[i]

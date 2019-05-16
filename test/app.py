@@ -11,7 +11,8 @@ def create_app():
 
     @app.before_serving
     def register_extensions():
-        EventBroker(app)
+        # provide a very low keepalive interval to make testing faster
+        EventBroker(app, keepalive=1)
 
     @app.route('/send/<msg>')
     async def message(msg):

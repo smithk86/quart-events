@@ -94,12 +94,18 @@ class EventBroker(MultisubscriberQueue):
         Override subscribe() to add a timeout for the keepalive event
 
         """
-        async for val in super(EventBroker, self).subscribe():
-            try:
-                async with timeout(self.keepalive):
-                    yield val
-            except asyncio.TimeoutError:
-                yield {'event': 'keepalive'}
+        with self.queue_context() as q:
+            while True:
+                try:
+                    async with timeout(self.keepalive):
+                        val = await q.get()
+                except asyncio.TimeoutError:
+                    yield {'event': 'keepalive'}
+                else:
+                    if val is StopAsyncIteration:
+                        break
+                    else:
+                        yield val
 
     async def sse_events(self):
         """

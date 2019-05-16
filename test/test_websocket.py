@@ -60,3 +60,20 @@ async def test_websocket_events(session, endpoint, event_loop):
 
     # wait for send() to end
     await task
+
+
+@pytest.mark.asyncio
+async def test_keepalive(session, endpoint, event_loop):
+    events = list()
+    async with session.ws_connect(f'{endpoint}/events/ws') as ws:
+        for i in range(4):
+            msg = await ws.__anext__()
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                e = json.loads(msg.data)
+                events.append(e)
+            else:
+                raise Exception()
+
+    # assert event values
+    for i in range(4):
+        assert events[0]['event'] == 'keepalive'
