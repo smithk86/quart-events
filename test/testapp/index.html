@@ -1,0 +1,111 @@
+<html>
+<head>
+    <title>quart-events test-app</title>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script type="text/javascript">
+        var wsEvents
+        var sseEvents
+
+        var close = function() {
+            if (wsEvents) wsEvents.close()
+            if (sseEvents) sseEvents.close()
+        }
+
+        var enable_websocket = function() {
+            var ws_protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://'
+            wsEvents = new WebSocket(ws_protocol + window.location.host + '/events/ws')
+            wsEvents.onmessage = function(event) {
+                var eventData = JSON.parse(event.data)
+                if (eventData.event == 'message' || eventData.event == 'uuid') {
+                    var tbody = $('table tbody')
+                    tbody.prepend('<tr><td>' + eventData.id + '</td><td>' + eventData.event + '</td><td>' + eventData.data + '</td></tr>')
+                }
+            }
+        }
+
+        var enable_sse = function() {
+            var process_event = function(e) {
+                var tbody = $('table tbody')
+                tbody.prepend('<tr><td>' + e.lastEventId + '</td><td>' + e.type + '</td><td>' + e.data + '</td></tr>')
+            }
+
+            if(typeof(EventSource) === 'undefined') {
+                alert('your browser does not support the EventSource object for SSE')
+                return
+            }
+            var sse_protocol = window.location.protocol === 'https:' ? 'https://' : 'http://'
+            sseEvents = new EventSource(sse_protocol + window.location.host + '/events/sse')
+            sseEvents.addEventListener('message', process_event, false)
+            sseEvents.addEventListener('uuid', process_event, false)
+        }
+
+        $(document).ready(function() {
+            enable_websocket()
+            $('#selectEventEngine').change(function() {
+                var engine = $(this).val()
+                console.log(engine)
+                close()
+                if (engine == 'ws') {
+                    enable_websocket()
+                } else if (engine == 'sse') {
+                    enable_sse()
+                }
+            })
+            $('#sendMessageButton').click(function() {
+                if ($('#sendMessageText').val().length > 0) {
+                    $.get('/send/' + $('#sendMessageText').val())
+                } else {
+                    alert('message cannot be empty')
+                }
+            })
+            $('#generateUuid').click(function() {
+                $.get('/uuid')
+            })
+        })
+    </script>
+</head>
+<body>
+<div class="container">
+    <div class="row">
+        <div class="col-sm">
+            <div class="form-group">
+            <label for="selectEventEngine">Select Event Engine</label>
+                <select class="form-control" id="selectEventEngine">
+                    <option value="ws">WebSockets</option>
+                    <option value="sse">Server Sent Events</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm-6">
+            <div class="form-group">
+                <input id="sendMessageText" type="text" class="form-control-plaintext" placeholder="type your message here">
+            </div>
+        </div>
+        <div class="col-sm-4 text-right">
+            <button id="sendMessageButton" type="button" class="btn btn-primary mb-2">Send Message</button>
+        </div>
+        <div class="col-sm text-right">
+            <button id="generateUuid" type="button" class="btn btn-primary mb-2">Generate UUID</button>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Event</th>
+                        <th>Data</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

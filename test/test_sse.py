@@ -18,7 +18,7 @@ async def test_message(session, endpoint, event_loop):
     data = ''
     async with session.get(f'{endpoint}/events/sse', headers={'Content-Type': 'text/event-stream'}) as r:
         for _ in range(6):
-            s = await r.content.read(12)
+            s = await r.content.read(24)
             data += s.decode('utf-8')
     events = data.split('\n\n')
 
