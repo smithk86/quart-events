@@ -17,7 +17,7 @@ def create_app():
     @app.before_serving
     def register_extensions():
         # provide a very low keepalive interval to make testing faster
-        EventBroker(app, keepalive=1)
+        EventBroker(app, keepalive=1, token_validation=True)
 
     @app.route('/')
     async def index():

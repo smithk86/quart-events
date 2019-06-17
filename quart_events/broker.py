@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class EventBroker(MultisubscriberQueue):
-    def __init__(self, app, url_prefix='/events', keepalive=30, token_validation=True, encoding='utf-8'):
+    def __init__(self, app, url_prefix='/events', keepalive=30, token_validation=False, encoding='utf-8'):
         """
         The constructor for EventBroker class
 
