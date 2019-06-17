@@ -12,16 +12,24 @@
             if (sseEvents) sseEvents.close()
         }
 
+        var auth_token = function(callback) {
+            $.getJSON('/events/auth', function(data) {
+                callback(data.token)
+            })
+        }
+
         var enable_websocket = function() {
-            var ws_protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://'
-            wsEvents = new WebSocket(ws_protocol + window.location.host + '/events/ws')
-            wsEvents.onmessage = function(event) {
-                var eventData = JSON.parse(event.data)
-                if (eventData.event == 'message' || eventData.event == 'uuid') {
-                    var tbody = $('table tbody')
-                    tbody.prepend('<tr><td>' + eventData.id + '</td><td>' + eventData.event + '</td><td>' + eventData.data + '</td></tr>')
+            auth_token(function(token) {
+                var ws_protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://'
+                wsEvents = new WebSocket(ws_protocol + window.location.host + '/events/ws/' + token)
+                wsEvents.onmessage = function(event) {
+                    var eventData = JSON.parse(event.data)
+                    if (eventData.event == 'message' || eventData.event == 'uuid') {
+                        var tbody = $('table tbody')
+                        tbody.prepend('<tr><td>' + eventData.id + '</td><td>' + eventData.event + '</td><td>' + eventData.data + '</td></tr>')
+                    }
                 }
-            }
+            })
         }
 
         var enable_sse = function() {
@@ -34,10 +42,13 @@
                 alert('your browser does not support the EventSource object for SSE')
                 return
             }
-            var sse_protocol = window.location.protocol === 'https:' ? 'https://' : 'http://'
-            sseEvents = new EventSource(sse_protocol + window.location.host + '/events/sse')
-            sseEvents.addEventListener('message', process_event, false)
-            sseEvents.addEventListener('uuid', process_event, false)
+
+            auth_token(function(token) {
+                var sse_protocol = window.location.protocol === 'https:' ? 'https://' : 'http://'
+                sseEvents = new EventSource(sse_protocol + window.location.host + '/events/sse/' + token)
+                sseEvents.addEventListener('message', process_event, false)
+                sseEvents.addEventListener('uuid', process_event, false)
+            })
         }
 
         $(document).ready(function() {

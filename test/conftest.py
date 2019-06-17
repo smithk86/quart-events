@@ -24,3 +24,11 @@ async def session(request, event_loop):
     s = aiohttp.ClientSession(loop=event_loop, raise_for_status=True)
     yield s
     await s.close()
+
+
+@pytest.fixture
+@pytest.mark.asyncio
+async def token(endpoint, session):
+    async with session.get(f'{endpoint}/events/auth') as r:
+        data = await r.json()
+        return data.get('token')

@@ -5,7 +5,7 @@ import aiohttp
 
 
 @pytest.mark.asyncio
-async def test_message(session, endpoint, event_loop):
+async def test_message(session, endpoint, token, event_loop):
     async def send():
         await sleep(.25)
         await session.get(f'{endpoint}/send/event0')
@@ -16,7 +16,7 @@ async def test_message(session, endpoint, event_loop):
     task = event_loop.create_task(send())
 
     data = ''
-    async with session.get(f'{endpoint}/events/sse', headers={'Content-Type': 'text/event-stream'}) as r:
+    async with session.get(f'{endpoint}/events/sse/{token}', headers={'Content-Type': 'text/event-stream'}) as r:
         for _ in range(6):
             s = await r.content.read(24)
             data += s.decode('utf-8')
@@ -31,7 +31,7 @@ async def test_message(session, endpoint, event_loop):
     await task
 
 @pytest.mark.asyncio
-async def test_message_events(session, endpoint, event_loop):
+async def test_message_events(session, endpoint, token, event_loop):
     async def send():
         await sleep(.25)
         await session.get(f'{endpoint}/generate')
@@ -40,7 +40,7 @@ async def test_message_events(session, endpoint, event_loop):
     task = event_loop.create_task(send())
 
     data = ''
-    async with session.get(f'{endpoint}/events/sse', headers={'Content-Type': 'text/event-stream'}) as r:
+    async with session.get(f'{endpoint}/events/sse/{token}', headers={'Content-Type': 'text/event-stream'}) as r:
         for _ in range(4):
             s = await r.content.read(66)
             data += s.decode('utf-8')
@@ -57,9 +57,9 @@ async def test_message_events(session, endpoint, event_loop):
 
 
 @pytest.mark.asyncio
-async def test_keepalive(session, endpoint, event_loop):
+async def test_keepalive(session, endpoint, token, event_loop):
     data = ''
-    async with session.get(f'{endpoint}/events/sse', headers={'Content-Type': 'text/event-stream'}) as r:
+    async with session.get(f'{endpoint}/events/sse/{token}', headers={'Content-Type': 'text/event-stream'}) as r:
         for _ in range(4):
             s = await r.content.read(20)
             data += s.decode('utf-8')
