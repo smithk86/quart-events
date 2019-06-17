@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class EventBroker(MultisubscriberQueue):
-    def __init__(self, app, url_prefix='/events', keepalive=30, token_validation=True, token_expiration=60, encoding='utf-8'):
+    def __init__(self, app, url_prefix='/events', keepalive=30, token_validation=True, encoding='utf-8'):
         """
         The constructor for EventBroker class
 
@@ -27,12 +27,13 @@ class EventBroker(MultisubscriberQueue):
             url_prefix (str): prefix for the blueprint
             keepalive (int): how often to sent a "keepalive" event when no new
                 events are being generated
+            token_validation (bool): enable/disable token validation
+            toke
             encoding (str): character encoding to use
 
         """
         self.keepalive = keepalive
         self.token_validation = token_validation
-        self.token_expiration = token_expiration
         self.encoding = encoding
         self.index = 0
         self.authorized_sessions = dict()
