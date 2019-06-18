@@ -96,9 +96,10 @@ class EventBroker(MultisubscriberQueue):
                         return token
                 return None
 
-            token = _get_token_by_remote_addr(request.remote_addr)
+            remote_addr = EventBroker.remote_addr(request.headers)
+            token = _get_token_by_remote_addr(remote_addr)
             if token is None:
-                token = self.token_generate(request.remote_addr)
+                token = self.token_generate(remote_addr)
 
             token_str = str(token)
             created = self.authorized_sessions[token_str].get('created')
@@ -107,8 +108,9 @@ class EventBroker(MultisubscriberQueue):
         @blueprint.route('/sse')
         @blueprint.route('/sse/<uuid:token>')
         async def server_sent_events(token=None):
+            remote_addr = EventBroker.remote_addr(request.headers)
             try:
-                self.token_verify(token, request.remote_addr)
+                self.token_verify(token, remote_addr)
             except EventBrokerAuthError as e:
                 r = jsonify(error=str(e), token=e.token)
                 r.status_code = 400
@@ -128,8 +130,9 @@ class EventBroker(MultisubscriberQueue):
         @blueprint.websocket('/ws')
         @blueprint.websocket('/ws/<uuid:token>')
         async def ws(token=None):
+            remote_addr = EventBroker.remote_addr(websocket.headers)
             try:
-                self.token_verify(token, websocket.remote_addr)
+                self.token_verify(token, remote_addr)
             except EventBrokerAuthError as e:
                 await websocket.send(json.dumps({'error': str(e), 'token': e.token}))
                 return
@@ -196,3 +199,12 @@ class EventBroker(MultisubscriberQueue):
         """
         async for data in self.subscribe():
             yield json.dumps(data, cls=JSONEncoder)
+
+    @staticmethod
+    def remote_addr(headers):
+        if 'X-Forwarded-For' in headers:
+            remote_addr = headers['X-Forwarded-For']
+        else:
+            remote_addr = headers.get('Remote-Addr')
+        logger.debug(f'remote address is {remote_addr}')
+        return remote_addr
