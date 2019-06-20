@@ -112,6 +112,7 @@ class EventBroker(MultisubscriberQueue):
             try:
                 self.token_verify(token, remote_addr)
             except EventBrokerAuthError as e:
+                logger.exception(e)
                 r = jsonify(error=str(e), token=e.token)
                 r.status_code = 400
                 return r
@@ -134,6 +135,7 @@ class EventBroker(MultisubscriberQueue):
             try:
                 self.token_verify(token, remote_addr)
             except EventBrokerAuthError as e:
+                logger.exception(e)
                 await websocket.send(json.dumps({'error': str(e), 'token': e.token}))
                 return
 
