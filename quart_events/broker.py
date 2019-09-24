@@ -2,6 +2,7 @@ import asyncio
 import logging
 import functools
 import json
+from collections import namedtuple
 from copy import copy
 from datetime import datetime, timedelta
 from uuid import UUID, uuid4
@@ -15,6 +16,7 @@ from .errors import EventBrokerError, EventBrokerAuthError
 
 
 logger = logging.getLogger(__name__)
+Session = namedtuple('Session', ['token', 'remote_addr', 'user_agent', 'created'])
 
 
 class EventBroker(MultisubscriberQueue):
@@ -52,15 +54,17 @@ class EventBroker(MultisubscriberQueue):
         return self
 
     def token_generate(self, remote_addr):
+        if self.token_validation is False:
+            raise EventBrokerError('token validation is disabled')
+
         token = uuid4()
-        session = {
-            'token': token,
-            'remote_addr': remote_addr,
-            'user_agent': request.headers.get('User-Agent'),
-            'created': datetime.now()
-        }
         token_str = str(token)
-        self.authorized_sessions[token_str] = session
+        self.authorized_sessions[token_str] = Session(
+            token=token,
+            remote_addr=remote_addr,
+            user_agent=request.headers.get('User-Agent'),
+            created=datetime.now()
+        )
         return token
 
     def token_verify(self, token, remote_addr):
@@ -74,8 +78,8 @@ class EventBroker(MultisubscriberQueue):
         session = self.authorized_sessions.get(token_str)
         if session is None:
             raise EventBrokerAuthError('token does not exist', token_str)
-        elif remote_addr != session.get('remote_addr'):
-            logger.error(f"token address mismatch: {remote_addr} != {session.get('remote_addr')}")
+        elif remote_addr != session.remote_addr:
+            logger.error(f"token address mismatch: {remote_addr} != {session.remote_addr}")
             raise EventBrokerAuthError('token could not be validated', token_str)
 
     def create_blueprint(self):
