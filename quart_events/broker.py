@@ -37,7 +37,7 @@ class EventBroker(MultisubscriberQueue):
         self.encoding = encoding
         self.index = 0
         self.authorized_sessions = dict()
-        super(EventBroker, self).__init__()
+        super().__init__()
 
         if app:
             self.init_app(app, url_prefix)
@@ -164,7 +164,7 @@ class EventBroker(MultisubscriberQueue):
             _data['event'] = event
         if data:
             _data['data'] = data
-        await super(EventBroker, self).put(_data)
+        await super().put(_data)
 
     async def subscribe(self):
         """
