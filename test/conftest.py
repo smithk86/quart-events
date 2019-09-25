@@ -1,34 +1,35 @@
 import aiohttp
+import asyncio
 import pytest
 
-
-def pytest_addoption(parser):
-    parser.addoption('--endpoint', default='http://localhost:5000')
+from testapp import create_app
 
 
-@pytest.fixture(name='endpoint')
+# override the default event_loop fixture
+@pytest.fixture(scope='session')
+def event_loop():
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest.fixture(scope='session')
 @pytest.mark.asyncio
-async def _endpoint(request):
-    endpoint = request.config.getoption('endpoint')
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(endpoint) as r:
-                return endpoint
-    except aiohttp.ClientConnectorError:
-        raise Exception('plase run app.py before testing')
+async def app():
+    app_ = create_app()
+    await app_.startup()
+    yield app_
+    await app_.shutdown()
 
 
-@pytest.yield_fixture
+@pytest.fixture(scope='session')
+def app_test_client(app):
+    return app.test_client()
+
+
+@pytest.fixture(scope='session')
 @pytest.mark.asyncio
-async def session(request, event_loop):
-    s = aiohttp.ClientSession(loop=event_loop, raise_for_status=True)
-    yield s
-    await s.close()
-
-
-@pytest.fixture
-@pytest.mark.asyncio
-async def token(endpoint, session):
-    async with session.get(f'{endpoint}/events/auth') as r:
-        data = await r.json()
-        return data.get('token')
+async def token(app_test_client):
+    r = await app_test_client.get('/events/auth')
+    data = await r.get_json()
+    return data.get('token')
