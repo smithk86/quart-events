@@ -136,7 +136,20 @@ class EventBroker(MultisubscriberQueue):
         async def ws():
             if self.auth:
                 remote_addr = EventBroker.remote_addr(websocket.headers)
-                token = await websocket.receive()
+
+                # receive token from client
+                try:
+                    async with timeout(5):
+                        token = await websocket.receive()
+                except asyncio.TimeoutError:
+                    token = None
+
+                # if toekn is null, return an error
+                if token is None:
+                    await websocket.send(json.dumps({'error': 'no authentication token received'}))
+                    return
+
+                # convert the token to a UUID and verify
                 try:
                     token = UUID(token)
                     self.token_verify(token, remote_addr)
@@ -145,6 +158,7 @@ class EventBroker(MultisubscriberQueue):
                     await websocket.send(json.dumps({'error': str(e), 'token': e.token}))
                     return
 
+            # enter subscriber loop
             async for val in self.subscribe():
                 try:
                     json_str = json.dumps(val, cls=JSONEncoder)
