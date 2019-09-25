@@ -160,7 +160,7 @@ class EventBroker(MultisubscriberQueue):
 
     async def put(self, **data):
         """
-        Put a new event on the event broker
+        Put a new data on the event broker
 
         Parameters:
             data: event data keyword arguments
