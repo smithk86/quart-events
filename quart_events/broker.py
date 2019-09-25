@@ -20,24 +20,23 @@ Session = namedtuple('Session', ['token', 'remote_addr', 'user_agent', 'created'
 
 
 class EventBroker(MultisubscriberQueue):
-    def __init__(self, app, url_prefix='/events', keepalive=30, token_validation=False, encoding='utf-8'):
+    def __init__(self, app, url_prefix='/events', keepalive=30, auth=True, encoding='utf-8'):
         """
         The constructor for EventBroker class
 
         Parameters:
             app (quart.Quart): Quart app
             url_prefix (str): prefix for the blueprint
-            keepalive (int): how often to sent a "keepalive" event when no new
+            keepalive (int): how often to send a "keepalive" event when no new
                 events are being generated
-            token_validation (bool): enable/disable token validation
+            auth (bool): enable/disable token validation
             toke
             encoding (str): character encoding to use
 
         """
         self.keepalive = keepalive
-        self.token_validation = token_validation
+        self.auth = auth
         self.encoding = encoding
-        self.index = 0
         self.authorized_sessions = dict()
         super().__init__()
 
@@ -54,7 +53,7 @@ class EventBroker(MultisubscriberQueue):
         return self
 
     def token_generate(self, remote_addr):
-        if self.token_validation is False:
+        if self.auth is False:
             raise EventBrokerError('token validation is disabled')
 
         token = uuid4()
@@ -68,11 +67,13 @@ class EventBroker(MultisubscriberQueue):
         return token
 
     def token_verify(self, token, remote_addr):
-        if self.token_validation is not True:
+        if self.auth is not True:
             return
 
-        if type(token) is not UUID:
+        if token is None:
             raise EventBrokerAuthError('no token was provided', None)
+        elif type(token) is not UUID:
+            raise EventBrokerAuthError('token must be a uuid', None)
 
         token_str = str(token)
         session = self.authorized_sessions.get(token_str)
@@ -92,83 +93,80 @@ class EventBroker(MultisubscriberQueue):
         """
         blueprint = Blueprint('events', __name__)
 
+        @blueprint.route('/sessions')
+        async def sessions():
+            session_list = list()
+            queue_info_list = list()
+            for s in self.authorized_sessions.values():
+                session_list.append(s._asdict())
+            for i, q in enumerate(self.subscribers):
+                queue_info_list.append({
+                    'index': i,
+                    'size': q.qsize()
+                })
+            return jsonify(
+                subscriber_count=len(self.subscribers),
+                subscribers=queue_info_list,
+                sessions=session_list
+            )
+
         @blueprint.route('/auth')
         async def auth():
             def _get_token_by_remote_addr(addr):
                 for token, data in self.authorized_sessions.items():
-                    if data['remote_addr'] == addr:
+                    if data.remote_addr == addr:
                         return token
                 return None
 
-            remote_addr = EventBroker.remote_addr(request.headers)
-            token = _get_token_by_remote_addr(remote_addr)
-            if token is None:
-                token = self.token_generate(remote_addr)
-
-            token_str = str(token)
-            created = self.authorized_sessions[token_str].get('created')
-            return jsonify(token=token, created=created)
-
-        @blueprint.route('/sse')
-        @blueprint.route('/sse/<uuid:token>')
-        async def server_sent_events(token=None):
-            remote_addr = EventBroker.remote_addr(request.headers)
             try:
-                self.token_verify(token, remote_addr)
-            except EventBrokerAuthError as e:
-                logger.exception(e)
-                r = jsonify(error=str(e), token=e.token)
+                remote_addr = EventBroker.remote_addr(request.headers)
+                token = _get_token_by_remote_addr(remote_addr)
+                if token is None:
+                    token = self.token_generate(remote_addr)
+
+                token_str = str(token)
+                created = self.authorized_sessions[token_str].created
+                return jsonify(token=token, created=created)
+            except Exception as e:
+                r = jsonify(token=None, created=None, error=str(e))
                 r.status_code = 400
                 return r
 
-            response = await make_response(
-                self.sse_events(),
-                {
-                    'Content-Type': 'text/event-stream',
-                    'Cache-Control': 'no-cache',
-                    'Transfer-Encoding': 'chunked',
-                }
-            )
-            response.timeout = None
-            return response
-
         @blueprint.websocket('/ws')
-        @blueprint.websocket('/ws/<uuid:token>')
-        async def ws(token=None):
-            remote_addr = EventBroker.remote_addr(websocket.headers)
-            try:
-                self.token_verify(token, remote_addr)
-            except EventBrokerAuthError as e:
-                logger.exception(e)
-                await websocket.send(json.dumps({'error': str(e), 'token': e.token}))
-                return
-
-            async for event in self.websocket_events():
+        async def ws():
+            if self.auth:
+                remote_addr = EventBroker.remote_addr(websocket.headers)
+                token = await websocket.receive()
                 try:
-                    await websocket.send(event)
+                    token = UUID(token)
+                    self.token_verify(token, remote_addr)
+                except EventBrokerAuthError as e:
+                    logger.exception(e)
+                    await websocket.send(json.dumps({'error': str(e), 'token': e.token}))
+                    return
+
+            async for val in self.subscribe():
+                try:
+                    json_str = json.dumps(val, cls=JSONEncoder)
+                    await websocket.send(json_str)
                 except asyncio.CancelledError:
+                    break
+                except Exception as e:
+                    logger.exception(e)
+                    logger.warning('ending subscriber loop')
                     break
 
         return blueprint
 
-    async def put(self, event=None, data=None):
+    async def put(self, **data):
         """
         Put a new event on the event broker
 
         Parameters:
-            event (str): event name
-            data: event data
+            data: event data keyword arguments
 
         """
-        self.index += 1
-        _data = {
-            'id': self.index
-        }
-        if event:
-            _data['event'] = event
-        if data:
-            _data['data'] = data
-        await super().put(_data)
+        await super().put(data)
 
     async def subscribe(self):
         """
@@ -187,24 +185,6 @@ class EventBroker(MultisubscriberQueue):
                         break
                     else:
                         yield val
-
-    async def sse_events(self):
-        """
-        Format events as Server Sent Events
-
-        """
-        async for data in self.subscribe():
-            msglist = [f'{k}: {v}' for k, v in data.items()]
-            msg = '\n'.join(msglist) + '\n\n'
-            yield bytes(msg, encoding=self.encoding)
-
-    async def websocket_events(self):
-        """
-        Json-encode events for Websockets
-
-        """
-        async for data in self.subscribe():
-            yield json.dumps(data, cls=JSONEncoder)
 
     @staticmethod
     def remote_addr(headers):

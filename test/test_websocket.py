@@ -16,7 +16,8 @@ async def test_websocket(session, endpoint, token, event_loop):
     # subscribe to events
     task = event_loop.create_task(send())
 
-    async with session.ws_connect(f'{endpoint}/events/ws/{token}') as ws:
+    async with session.ws_connect(f'{endpoint}/events/ws') as ws:
+        await ws.send_str(token)
         for i in range(3):
             msg = await ws.__anext__()
             if msg.type == aiohttp.WSMsgType.TEXT:
@@ -39,7 +40,8 @@ async def test_websocket_events(session, endpoint, token, event_loop):
     task = event_loop.create_task(send())
 
     events = list()
-    async with session.ws_connect(f'{endpoint}/events/ws/{token}') as ws:
+    async with session.ws_connect(f'{endpoint}/events/ws') as ws:
+        await ws.send_str(token)
         for i in range(4):
             msg = await ws.__anext__()
             if msg.type == aiohttp.WSMsgType.TEXT:
@@ -65,7 +67,8 @@ async def test_websocket_events(session, endpoint, token, event_loop):
 @pytest.mark.asyncio
 async def test_keepalive(session, endpoint, token, event_loop):
     events = list()
-    async with session.ws_connect(f'{endpoint}/events/ws/{token}') as ws:
+    async with session.ws_connect(f'{endpoint}/events/ws') as ws:
+        await ws.send_str(token)
         for i in range(4):
             msg = await ws.__anext__()
             if msg.type == aiohttp.WSMsgType.TEXT:
