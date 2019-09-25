@@ -16,7 +16,7 @@ async def test_bad_token(app_test_client):
 
 
 @pytest.mark.asyncio
-async def test_no_token(app_test_client):
+async def test_not_sending_token(app_test_client):
     async def send():
         await asyncio.sleep(.25)
         await app_test_client.get('/send/event0')
@@ -34,6 +34,14 @@ async def test_no_token(app_test_client):
         except asyncio.TimeoutError:
             pass
         assert this_timeout.expired is True
+
+
+@pytest.mark.asyncio
+async def test_token_receive_timeout(app_test_client):
+    async with app_test_client.websocket('/events/ws') as ws:
+        msg = await ws.receive()
+        data = json.loads(msg)
+        assert data.get('error') == 'no authentication token received'
 
 
 @pytest.mark.asyncio
