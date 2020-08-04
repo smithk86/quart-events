@@ -1,5 +1,6 @@
 import asyncio
 import json
+from uuid import uuid4
 
 import pytest
 import quart
@@ -8,10 +9,18 @@ from async_timeout import timeout
 
 @pytest.mark.asyncio
 async def test_bad_token(app_test_client):
+    # test sending "123" as the token
     async with app_test_client.websocket('/events/ws') as ws:
         await ws.send('123')
-        with pytest.raises(quart.testing.WebsocketResponse):
-            await ws.receive()
+        wsdata_raw = await ws.receive()
+        wsdata = json.loads(wsdata_raw)
+        assert wsdata.get('error') == 'token must be a uuid'
+    # test using a randomly generated uuid
+    async with app_test_client.websocket('/events/ws') as ws:
+        await ws.send(str(uuid4()))
+        wsdata_raw = await ws.receive()
+        wsdata = json.loads(wsdata_raw)
+        assert wsdata.get('error') == 'token does not exist'
 
 
 @pytest.mark.asyncio

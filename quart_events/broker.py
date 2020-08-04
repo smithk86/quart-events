@@ -152,6 +152,11 @@ class EventBroker(MultisubscriberQueue):
                 # convert the token to a UUID and verify
                 try:
                     token = UUID(token)
+                except Exception:
+                    await websocket.send(json.dumps({'error': 'token must be a uuid', 'token': token}))
+                    return
+
+                try:
                     self.token_verify(token, remote_addr)
                 except EventBrokerAuthError as e:
                     logger.exception(e)
