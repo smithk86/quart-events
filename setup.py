@@ -37,8 +37,7 @@ setup(
     ],
     tests_require=[
         'pytest',
-        'pytest-asyncio',
-        'aiohttp'
+        'pytest-asyncio'
     ],
     classifiers=[
         'Environment :: Web Environment',

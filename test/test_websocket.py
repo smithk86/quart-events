@@ -1,7 +1,6 @@
 import asyncio
 import json
 
-import aiohttp
 import pytest
 import quart
 from async_timeout import timeout
