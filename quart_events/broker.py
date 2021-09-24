@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import functools
@@ -5,12 +7,14 @@ import json
 from collections import namedtuple
 from copy import copy
 from datetime import datetime, timedelta
+from typing import AsyncGenerator, Union
 from uuid import UUID, uuid4
 
 from asyncio_multisubscriber_queue import MultisubscriberQueue
 from async_timeout import timeout
-from quart import Blueprint, make_response, jsonify, request, websocket
+from quart import Blueprint, make_response, jsonify, Quart, request, Response, websocket
 from quart.json import JSONEncoder
+from werkzeug.datastructures import Headers
 
 from .errors import EventBrokerError, EventBrokerAuthError
 
@@ -20,7 +24,14 @@ Session = namedtuple('Session', ['token', 'remote_addr', 'user_agent', 'created'
 
 
 class EventBroker(MultisubscriberQueue):
-    def __init__(self, app, url_prefix='/events', keepalive=30, auth=True, encoding='utf-8'):
+    def __init__(
+        self,
+        app: Quart,
+        url_prefix: str = '/events',
+        keepalive: int = 30,
+        auth: bool = True,
+        encoding: str = 'utf-8'
+    ):
         """
         The constructor for EventBroker class
 
@@ -43,7 +54,7 @@ class EventBroker(MultisubscriberQueue):
         if app:
             self.init_app(app, url_prefix)
 
-    def init_app(self, app, url_prefix):
+    def init_app(self, app: Quart, url_prefix: str) -> Quart:
         """
         Register the blueprint with the application
 
@@ -52,7 +63,7 @@ class EventBroker(MultisubscriberQueue):
         app.register_blueprint(self.create_blueprint(), url_prefix=url_prefix)
         return self
 
-    def token_generate(self, remote_addr):
+    def token_generate(self, remote_addr: str) -> UUID:
         if self.auth is False:
             raise EventBrokerError('token validation is disabled')
 
@@ -66,7 +77,7 @@ class EventBroker(MultisubscriberQueue):
         )
         return token
 
-    def token_verify(self, token, remote_addr):
+    def token_verify(self, token: str, remote_addr: str) -> None:
         if self.auth is not True:
             return
 
@@ -83,7 +94,7 @@ class EventBroker(MultisubscriberQueue):
             logger.error(f"token address mismatch: {remote_addr} != {session.remote_addr}")
             raise EventBrokerAuthError('token could not be validated', token_str)
 
-    def create_blueprint(self):
+    def create_blueprint(self) -> Blueprint:
         """
         Generate the blueprint
 
@@ -94,7 +105,7 @@ class EventBroker(MultisubscriberQueue):
         blueprint = Blueprint('events', __name__)
 
         @blueprint.route('/sessions')
-        async def sessions():
+        async def sessions() -> Response:
             session_list = list()
             queue_info_list = list()
             for s in self.authorized_sessions.values():
@@ -111,7 +122,7 @@ class EventBroker(MultisubscriberQueue):
             )
 
         @blueprint.route('/auth')
-        async def auth():
+        async def auth() -> Response:
             def _get_token_by_remote_addr(addr):
                 for token, data in self.authorized_sessions.items():
                     if data.remote_addr == addr:
@@ -133,7 +144,7 @@ class EventBroker(MultisubscriberQueue):
                 return r
 
         @blueprint.websocket('/ws')
-        async def ws():
+        async def ws() -> Response:
             if self.auth:
                 remote_addr = EventBroker.remote_addr(websocket.headers)
 
@@ -164,6 +175,7 @@ class EventBroker(MultisubscriberQueue):
                     return
 
             # enter subscriber loop
+            print(type(self.subscribe()))
             async for val in self.subscribe():
                 try:
                     json_str = json.dumps(val, cls=JSONEncoder)
@@ -177,7 +189,7 @@ class EventBroker(MultisubscriberQueue):
 
         return blueprint
 
-    async def put(self, **data):
+    async def put(self, **data) -> None:
         """
         Put a new data on the event broker
 
@@ -187,7 +199,7 @@ class EventBroker(MultisubscriberQueue):
         """
         await super().put(data)
 
-    async def subscribe(self):
+    async def subscribe(self) -> AsyncGenerator:
         """
         Override subscribe() to add a timeout for the keepalive event
 
@@ -206,7 +218,7 @@ class EventBroker(MultisubscriberQueue):
                         yield val
 
     @staticmethod
-    def remote_addr(headers):
+    def remote_addr(headers: Headers) -> str:
         if 'X-Forwarded-For' in headers:
             remote_addr = headers['X-Forwarded-For']
         else:
