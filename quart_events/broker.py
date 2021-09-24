@@ -30,6 +30,7 @@ class EventBroker(MultisubscriberQueue):
         url_prefix: str = '/events',
         keepalive: int = 30,
         auth: bool = True,
+        namespace_field: Union[str, None] = None,
         encoding: str = 'utf-8'
     ):
         """
@@ -41,12 +42,13 @@ class EventBroker(MultisubscriberQueue):
             keepalive (int): how often to send a "keepalive" event when no new
                 events are being generated
             auth (bool): enable/disable token validation
-            toke
+            namespace_field: enable namespacing with given value
             encoding (str): character encoding to use
 
         """
         self.keepalive = keepalive
         self.auth = auth
+        self.namespace_field = namespace_field
         self.encoding = encoding
         self.authorized_sessions = dict()
         super().__init__()
@@ -144,7 +146,11 @@ class EventBroker(MultisubscriberQueue):
                 return r
 
         @blueprint.websocket('/ws')
-        async def ws() -> Response:
+        @blueprint.websocket('/ws/<namespace>')
+        async def ws(namespace: Union[str, None] = None) -> Response:
+            if self.namespace_field is None and namespace is not None:
+                raise RuntimeError('namespaces are not enabled for this broker')
+
             if self.auth:
                 remote_addr = EventBroker.remote_addr(websocket.headers)
 
@@ -175,9 +181,22 @@ class EventBroker(MultisubscriberQueue):
                     return
 
             # enter subscriber loop
-            print(type(self.subscribe()))
             async for val in self.subscribe():
                 try:
+                    """
+                        if namespacing is enabled, the designated
+                        field must start with the namespace value.
+                        Otherwise, this event will be skipped.
+
+                    """
+                    if namespace:
+                        _field_value = val.get(self.namespace_field)
+                        if (
+                            _field_value is None or
+                            not _field_value.startswith(namespace)
+                        ):
+                            continue
+
                     json_str = json.dumps(val, cls=JSONEncoder)
                     await websocket.send(json_str)
                 except asyncio.CancelledError:

@@ -93,15 +93,17 @@ async def test_websocket_events(app_test_client, token):
             data = json.loads(msg)
             events.append(data)
 
+    assert len(events) == 4
+
     # assert event values
     assert events[0]['data'] == '1c1c5907-d262-468c-9eca-34092fd87b06'
-    assert events[0]['event'] == 'test0'
+    assert events[0]['event'] == 'ns0:test0'
     assert events[1]['data'] == '8e7e1f98-9df1-42cf-8896-aeba658053d3'
-    assert events[1]['event'] == 'test1'
+    assert events[1]['event'] == 'ns0:test1'
     assert events[2]['data'] == '30db7186-e66a-43eb-a32a-d0311ca8d153'
-    assert events[2]['event'] == 'test2'
+    assert events[2]['event'] == 'ns1:test2'
     assert events[3]['data'] == '6ca404d0-7416-4409-aa2a-c9120360c04f'
-    assert events[3]['event'] == 'test3'
+    assert events[3]['event'] == 'ns1:test3'
 
     # wait for send() to end
     await task
@@ -112,7 +114,7 @@ async def test_keepalive(app_test_client, token):
     events = list()
     async with app_test_client.websocket('/events/ws') as ws:
         await ws.send(token)
-        for i in range(4):
+        for i in range(2):
             msg = await ws.receive()
             data = json.loads(msg)
             events.append(data)
@@ -120,3 +122,33 @@ async def test_keepalive(app_test_client, token):
     # assert event values
     for i in range(4):
         assert events[0]['event'] == 'keepalive'
+
+
+@pytest.mark.asyncio
+async def test_namespaced_events(namespace_app_test_client, namespace_token):
+    async def send():
+        await asyncio.sleep(.25)
+        await namespace_app_test_client.get('/generate')
+
+    loop = asyncio.get_running_loop()
+    # subscribe to events
+    task = loop.create_task(send())
+
+    events = list()
+    async with namespace_app_test_client.websocket('/events/ws/ns1') as ws:
+        await ws.send(namespace_token)
+        for i in range(2):
+            msg = await ws.receive()
+            data = json.loads(msg)
+            events.append(data)
+
+    assert len(events) == 2
+
+    # assert event values
+    assert events[0]['data'] == '30db7186-e66a-43eb-a32a-d0311ca8d153'
+    assert events[0]['event'] == 'ns1:test2'
+    assert events[1]['data'] == '6ca404d0-7416-4409-aa2a-c9120360c04f'
+    assert events[1]['event'] == 'ns1:test3'
+
+    # wait for send() to end
+    await task

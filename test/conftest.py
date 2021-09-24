@@ -40,3 +40,25 @@ async def token(app_test_client):
     r = await app_test_client.get('/events/auth')
     data = await r.get_json()
     return data.get('token')
+
+
+@pytest.fixture(scope='session')
+@pytest.mark.asyncio
+async def namespace_app():
+    app_ = create_app(event_namespace_field='event')
+    await app_.startup()
+    yield app_
+    await app_.shutdown()
+
+
+@pytest.fixture(scope='session')
+def namespace_app_test_client(namespace_app):
+    return namespace_app.test_client()
+
+
+@pytest.fixture(scope='session')
+@pytest.mark.asyncio
+async def namespace_token(namespace_app_test_client):
+    r = await namespace_app_test_client.get('/events/auth')
+    data = await r.get_json()
+    return data.get('token')
