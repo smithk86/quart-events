@@ -69,7 +69,12 @@ async def test_websocket_events(app_test_client, quart_events_catcher):
     async with quart_events_catcher.events(4) as _events:
         await app_test_client.get('/generate')
 
-    assert len(_events) == 4
+    _events.assert_events([
+        'ns0:test0',
+        'ns0:test1',
+        'ns1:test2',
+        'ns1:test3'
+    ])
 
     # assert event values
     _event_list = list(_events)
@@ -88,7 +93,12 @@ async def test_keepalive(app_test_client, quart_events_catcher):
     async with quart_events_catcher.events(4) as _events:
         pass
 
-    assert len(_events) == 4
+    _events.assert_events([
+        'keepalive',
+        'keepalive',
+        'keepalive',
+        'keepalive'
+    ])
 
     # assert event values
     for _event in _events:
@@ -100,7 +110,10 @@ async def test_namespaced_events(app_test_client, event_catcher_with_namespace):
     async with event_catcher_with_namespace.events(2) as _events:
         await app_test_client.get('/generate')
 
-    assert len(_events) == 2
+    _events.assert_events([
+        'ns1:test2',
+        'ns1:test3'
+    ])
 
     # assert event values
     _event_list = list(_events)
@@ -115,7 +128,10 @@ async def test_namespaced_events2(app_test_client, quart_events_catcher):
     async with quart_events_catcher.events(3, namespace='ns0') as _events:
         await app_test_client.get('/generate')
 
-    assert len(_events) == 2
+    _events.assert_events([
+        'ns0:test0',
+        'ns0:test1'
+    ])
 
     # assert event values
     _event_list = list(_events)
