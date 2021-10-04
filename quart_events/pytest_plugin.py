@@ -85,11 +85,12 @@ class EventsCatcher(MultisubscriberQueue, AsyncioService):
                 if data:
                     await self.put(json.loads(data))
 
-    def events(self, expected, timeout=5):
+    def events(self, expected, timeout=5, namespace=None):
         return CaughtEvents(
             catcher=self,
             expected=expected,
-            timeout=timeout
+            timeout=timeout,
+            namespace=namespace
         )
 
 
@@ -97,13 +98,15 @@ class CaughtEvents(AsyncioService):
     def __init__(
         self,
         catcher: EventsCatcher,
-        expected,
-        timeout=5
+        expected: int,
+        timeout: int = 5,
+        namespace: Union[str, None] = None
     ):
         super().__init__()
         self.catcher = catcher
         self.expected = expected
         self.timeout = timeout
+        self.namespace = namespace
         self._events = list()
 
     def __repr__(self) -> str:
@@ -119,6 +122,13 @@ class CaughtEvents(AsyncioService):
         self._events = list()
         async with Timeout(self.timeout):
             async for _event in self.catcher.subscribe():
+                if (
+                    self.namespace and (
+                        _event.get('event') is None or
+                        not _event['event'].startswith(self.namespace)
+                    )
+                ):
+                    continue
                 self._events.append(_event)
                 if len(self._events) >= self.expected:
                     return

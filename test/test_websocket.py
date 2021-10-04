@@ -7,8 +7,6 @@ import quart
 from async_timeout import timeout
 
 
-
-
 @pytest.mark.asyncio
 async def test_bad_token(app_test_client):
     # test sending "123" as the token
@@ -110,3 +108,18 @@ async def test_namespaced_events(app_test_client, event_catcher_with_namespace):
     assert _event_list[0]['event'] == 'ns1:test2'
     assert _event_list[1]['data'] == '6ca404d0-7416-4409-aa2a-c9120360c04f'
     assert _event_list[1]['event'] == 'ns1:test3'
+
+
+@pytest.mark.asyncio
+async def test_namespaced_events2(app_test_client, quart_events_catcher):
+    async with quart_events_catcher.events(3, namespace='ns0') as _events:
+        await app_test_client.get('/generate')
+
+    assert len(_events) == 2
+
+    # assert event values
+    _event_list = list(_events)
+    assert _event_list[0]['data'] == '1c1c5907-d262-468c-9eca-34092fd87b06'
+    assert _event_list[0]['event'] == 'ns0:test0'
+    assert _event_list[1]['data'] == '8e7e1f98-9df1-42cf-8896-aeba658053d3'
+    assert _event_list[1]['event'] == 'ns0:test1'
