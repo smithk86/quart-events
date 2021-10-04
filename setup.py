@@ -27,6 +27,7 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     packages=['quart_events'],
+    entry_points={'pytest11': ['quart_events = quart_events.pytest_plugin']},
     install_requires=[
         'async-timeout',
         'asyncio-multisubscriber-queue',

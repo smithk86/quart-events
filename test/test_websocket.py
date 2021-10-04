@@ -6,10 +6,7 @@ import pytest
 import quart
 from async_timeout import timeout
 
-import pytest_quart_events.plugin
 
-
-pytest_plugins = ("pytest_quart_events.plugin",)
 
 
 @pytest.mark.asyncio
@@ -58,8 +55,8 @@ async def test_token_receive_timeout(app_test_client):
 
 
 @pytest.mark.asyncio
-async def test_websocket(app_test_client, event_catcher):
-    async with event_catcher.events(3) as _events:
+async def test_websocket(app_test_client, quart_events_catcher):
+    async with quart_events_catcher.events(3) as _events:
         await app_test_client.get('/send/event0')
         await app_test_client.get('/send/event1')
         await app_test_client.get('/send/event2')
@@ -70,13 +67,13 @@ async def test_websocket(app_test_client, event_catcher):
 
 
 @pytest.mark.asyncio
-async def test_websocket_events(app_test_client, event_catcher):
-    async with event_catcher.events(4) as _events:
+async def test_websocket_events(app_test_client, quart_events_catcher):
+    async with quart_events_catcher.events(4) as _events:
         await app_test_client.get('/generate')
 
     assert len(_events) == 4
 
-    # # assert event values
+    # assert event values
     _event_list = list(_events)
     assert _event_list[0]['data'] == '1c1c5907-d262-468c-9eca-34092fd87b06'
     assert _event_list[0]['event'] == 'ns0:test0'
@@ -89,8 +86,8 @@ async def test_websocket_events(app_test_client, event_catcher):
 
 
 @pytest.mark.asyncio
-async def test_keepalive(app_test_client, event_catcher):
-    async with event_catcher.events(4) as _events:
+async def test_keepalive(app_test_client, quart_events_catcher):
+    async with quart_events_catcher.events(4) as _events:
         pass
 
     assert len(_events) == 4
@@ -101,30 +98,15 @@ async def test_keepalive(app_test_client, event_catcher):
 
 
 @pytest.mark.asyncio
-async def test_namespaced_events(namespace_app_test_client, namespace_token):
-    async def send():
-        await asyncio.sleep(.25)
-        await namespace_app_test_client.get('/generate')
+async def test_namespaced_events(app_test_client, event_catcher_with_namespace):
+    async with event_catcher_with_namespace.events(2) as _events:
+        await app_test_client.get('/generate')
 
-    loop = asyncio.get_running_loop()
-    # subscribe to events
-    task = loop.create_task(send())
-
-    events = list()
-    async with namespace_app_test_client.websocket('/events/ws/ns1') as ws:
-        await ws.send(namespace_token)
-        for i in range(2):
-            msg = await ws.receive()
-            data = json.loads(msg)
-            events.append(data)
-
-    assert len(events) == 2
+    assert len(_events) == 2
 
     # assert event values
-    assert events[0]['data'] == '30db7186-e66a-43eb-a32a-d0311ca8d153'
-    assert events[0]['event'] == 'ns1:test2'
-    assert events[1]['data'] == '6ca404d0-7416-4409-aa2a-c9120360c04f'
-    assert events[1]['event'] == 'ns1:test3'
-
-    # wait for send() to end
-    await task
+    _event_list = list(_events)
+    assert _event_list[0]['data'] == '30db7186-e66a-43eb-a32a-d0311ca8d153'
+    assert _event_list[0]['event'] == 'ns1:test2'
+    assert _event_list[1]['data'] == '6ca404d0-7416-4409-aa2a-c9120360c04f'
+    assert _event_list[1]['event'] == 'ns1:test3'

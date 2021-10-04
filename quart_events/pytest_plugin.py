@@ -8,35 +8,72 @@ from contextlib import asynccontextmanager
 import pytest
 from asyncio_multisubscriber_queue import MultisubscriberQueue
 from asyncio_service import AsyncioService, asyncio_service
+from quart import Quart
+from typing import Dict, Union
+
 
 from async_timeout import timeout as Timeout
 
 
+def pytest_addoption(parser):
+    _group = parser.getgroup('pytest_quart_events')
+    _group.addoption(
+        '--quart-events-path',
+        default='/events',
+        help='url path for quart-events blueprint'
+    )
+    _group.addoption(
+        '--quart-events-namespace',
+        default=None,
+        help='optional namespace for quart-events'
+    )
+
+
+@pytest.fixture(scope='session')
+def quart_events_options(request):
+    """ config options for the quart-events pytest plugin """
+    _config = request.config
+    return {
+        'blueprint_path': _config.getoption('quart_events_path'),
+        'namespace': _config.getoption('quart_events_namespace')
+    }
+
+
 @pytest.fixture(scope='session')
 @pytest.mark.asyncio
-async def event_catcher(app):
-    """ catch events as they happen in the background """
-    async with EventCatcher(app, url_prefix='/') as _catcher:
+async def quart_events_catcher(app: Quart, quart_events_options: Dict):
+    """ catch events from quart-events as they are generated in the background """
+    async with EventsCatcher(
+        app,
+        blueprint_path=quart_events_options['blueprint_path'],
+        namespace=quart_events_options['namespace']
+    ) as _catcher:
         yield _catcher
 
 
-class EventCatcher(MultisubscriberQueue, AsyncioService):
+class EventsCatcher(MultisubscriberQueue, AsyncioService):
     def __init__(
         self,
         app: Quart,
-        url_prefix=''
+        blueprint_path: Union[str, None],
+        namespace: Union[str, None] = None
     ):
         MultisubscriberQueue.__init__(self)
         AsyncioService.__init__(self)
         self.app = app
-        self.url_prefix = url_prefix
+        self.blueprint_path = blueprint_path
+        self.namespace = namespace
 
     async def run(self):
         _client = self.app.test_client()
-        r = await _client.get(f'{self.url_prefix}/events/auth')
+        r = await _client.get(f'{self.blueprint_path}/auth')
         data = await r.get_json()
         token = data.get('token')
-        url = f'{self.url_prefix}/events/ws'
+        url = f'{self.blueprint_path}/ws'
+
+        if self.namespace:
+            url = f'{url}/{self.namespace}'
+
         async with _client.websocket(url) as ws:
             await ws.send(token)
             while self.running:
@@ -48,17 +85,25 @@ class EventCatcher(MultisubscriberQueue, AsyncioService):
                 if data:
                     await self.put(json.loads(data))
 
-    def events(self, expected, timeout=5, namespace=None):
-        return CaughtEvents(self, expected, timeout=timeout, namespace=namespace)
+    def events(self, expected, timeout=5):
+        return CaughtEvents(
+            catcher=self,
+            expected=expected,
+            timeout=timeout
+        )
 
 
 class CaughtEvents(AsyncioService):
-    def __init__(self, catcher: EventCatcher, expected, timeout=5, namespace=None):
+    def __init__(
+        self,
+        catcher: EventsCatcher,
+        expected,
+        timeout=5
+    ):
         super().__init__()
         self.catcher = catcher
         self.expected = expected
         self.timeout = timeout
-        self.namespace = namespace
         self._events = list()
 
     def __repr__(self) -> str:

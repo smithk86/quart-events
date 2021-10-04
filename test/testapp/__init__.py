@@ -10,14 +10,14 @@ from quart_events import EventBroker
 dir_ = os.path.dirname(os.path.abspath(__file__))
 
 
-def create_app(event_namespace_field=None):
+def create_app():
     app = Quart(__name__, template_folder=dir_)
     app.config['TEMPLATES_AUTO_RELOAD'] = True
 
     @app.before_serving
     def register_extensions():
         # provide a very low keepalive interval to make testing faster
-        EventBroker(app, keepalive=1, namespace_field=event_namespace_field)
+        EventBroker(app, keepalive=1)
 
     @app.route('/')
     async def index():

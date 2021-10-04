@@ -30,7 +30,6 @@ class EventBroker(MultisubscriberQueue):
         url_prefix: str = '/events',
         keepalive: int = 30,
         auth: bool = True,
-        namespace_field: Union[str, None] = None,
         encoding: str = 'utf-8'
     ):
         """
@@ -42,13 +41,11 @@ class EventBroker(MultisubscriberQueue):
             keepalive (int): how often to send a "keepalive" event when no new
                 events are being generated
             auth (bool): enable/disable token validation
-            namespace_field: enable namespacing with given value
             encoding (str): character encoding to use
 
         """
         self.keepalive = keepalive
         self.auth = auth
-        self.namespace_field = namespace_field
         self.encoding = encoding
         self.authorized_sessions = dict()
         super().__init__()
@@ -148,9 +145,6 @@ class EventBroker(MultisubscriberQueue):
         @blueprint.websocket('/ws')
         @blueprint.websocket('/ws/<namespace>')
         async def ws(namespace: Union[str, None] = None) -> Response:
-            if self.namespace_field is None and namespace is not None:
-                raise RuntimeError('namespaces are not enabled for this broker')
-
             if self.auth:
                 remote_addr = EventBroker.remote_addr(websocket.headers)
 
@@ -184,18 +178,18 @@ class EventBroker(MultisubscriberQueue):
             async for val in self.subscribe():
                 try:
                     """
-                        if namespacing is enabled, the designated
-                        field must start with the namespace value.
-                        Otherwise, this event will be skipped.
-
+                        * if a namespace is given but the "event"
+                        field is not, skip this event.
+                        * if a namespace is given but does not match
+                        the "event" field, skip this event.
                     """
-                    if namespace:
-                        _field_value = val.get(self.namespace_field)
-                        if (
-                            _field_value is None or
-                            not _field_value.startswith(namespace)
-                        ):
-                            continue
+                    if (
+                        namespace and (
+                            val.get('event') is None or
+                            not val['event'].startswith(namespace)
+                        )
+                    ):
+                        continue
 
                     json_str = json.dumps(val, cls=JSONEncoder)
                     await websocket.send(json_str)
@@ -208,15 +202,22 @@ class EventBroker(MultisubscriberQueue):
 
         return blueprint
 
-    async def put(self, **data) -> None:
+    async def put(self, event=None, **data) -> None:
         """
         Put a new data on the event broker
 
         Parameters:
+            event: name of the event [optional]
             data: event data keyword arguments
 
         """
-        await super().put(data)
+
+        if event:
+            _data = {'event': event}
+        else:
+            _data = {}
+        _data.update(data)
+        await super().put(_data)
 
     async def subscribe(self) -> AsyncGenerator:
         """
