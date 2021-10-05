@@ -16,26 +16,20 @@ from async_timeout import timeout as Timeout
 
 
 def pytest_addoption(parser):
-    _group = parser.getgroup('pytest_quart_events')
-    _group.addoption(
-        '--quart-events-path',
-        default='/events',
-        help='url path for quart-events blueprint'
-    )
-    _group.addoption(
-        '--quart-events-namespace',
-        default=None,
-        help='optional namespace for quart-events'
-    )
+    _group = parser.getgroup('quart_events')
+    parser.addini('quart_events_path', 'url path for quart-events blueprint')
+    parser.addini('quart_events_namespace', 'optional namespace for quart-events')
 
 
 @pytest.fixture(scope='session')
 def quart_events_options(request):
     """ config options for the quart-events pytest plugin """
     _config = request.config
+    _quart_events_path = _config.getini('quart_events_path')
+    _quart_events_namespace = _config.getini('quart_events_namespace')
     return {
-        'blueprint_path': _config.getoption('quart_events_path'),
-        'namespace': _config.getoption('quart_events_namespace')
+        'blueprint_path': _quart_events_path if len(_quart_events_path) > 0 else '/events',
+        'namespace': _quart_events_namespace if len(_quart_events_namespace) > 0 else None,
     }
 
 
@@ -67,6 +61,7 @@ class EventsCatcher(MultisubscriberQueue, AsyncioService):
     async def run(self):
         _client = self.app.test_client()
         r = await _client.get(f'{self.blueprint_path}/auth')
+        assert r.status_code == 200
         data = await r.get_json()
         token = data.get('token')
         url = f'{self.blueprint_path}/ws'

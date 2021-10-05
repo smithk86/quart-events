@@ -6,6 +6,9 @@ dir_ = Path(os.path.dirname(os.path.realpath(__file__)))
 sys.path.insert(0, str(dir_.parent))
 
 
+pytest_plugins = ['quart_events.pytest_plugin']
+
+
 import asyncio
 
 import pytest
@@ -50,18 +53,6 @@ async def token(app_test_client):
     r = await app_test_client.get('/events/auth')
     data = await r.get_json()
     return data.get('token')
-
-
-@pytest.fixture(scope='session')
-@pytest.mark.asyncio
-async def quart_events_catcher(app):
-    """ catch events as they happen in the background """
-    async with EventsCatcher(
-        app,
-        blueprint_path='/events',
-        namespace=None
-    ) as _catcher:
-        yield _catcher
 
 
 @pytest.fixture(scope='session')
