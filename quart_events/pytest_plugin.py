@@ -9,38 +9,33 @@ import pytest
 from asyncio_multisubscriber_queue import MultisubscriberQueue
 from asyncio_service import AsyncioService, asyncio_service
 from quart import Quart
-from typing import Dict, Union
+from typing import Union
 
 
 from async_timeout import timeout as Timeout
 
 
 def pytest_addoption(parser):
-    _group = parser.getgroup('quart_events')
     parser.addini('quart_events_path', 'url path for quart-events blueprint')
     parser.addini('quart_events_namespace', 'optional namespace for quart-events')
 
 
 @pytest.fixture(scope='session')
-def quart_events_options(request):
-    """ config options for the quart-events pytest plugin """
-    _config = request.config
-    _quart_events_path = _config.getini('quart_events_path')
-    _quart_events_namespace = _config.getini('quart_events_namespace')
-    return {
-        'blueprint_path': _quart_events_path if len(_quart_events_path) > 0 else '/events',
-        'namespace': _quart_events_namespace if len(_quart_events_namespace) > 0 else None,
-    }
-
-
-@pytest.fixture(scope='session')
 @pytest.mark.asyncio
-async def quart_events_catcher(app: Quart, quart_events_options: Dict):
+async def quart_events_catcher(app: Quart, request):
+    def _getini(name, default=None):
+        """
+            getini returns an empty string instead of None;
+            this helper fixes that
+        """
+        _val = request.config.getini(name)
+        return _val if len(_val) > 0 else default
+
     """ catch events from quart-events as they are generated in the background """
     async with EventsCatcher(
         app,
-        blueprint_path=quart_events_options['blueprint_path'],
-        namespace=quart_events_options['namespace']
+        blueprint_path=_getini('quart_events_path', default='/events'),
+        namespace=_getini('quart_events_namespace', default=None)
     ) as _catcher:
         yield _catcher
 
