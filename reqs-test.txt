@@ -1,18 +1,15 @@
 aiofiles==0.7.0
-async-timeout==4.0.0a3
+async-timeout==3.0.1
 asyncio-multisubscriber-queue==0.2.5
-asyncio-service @ git+https://github.com/smithk86/asyncio-service.git@3520bb30d29a718d8b5ede194f45e0520489b2c8
+asyncio-service @ git+https://github.com/smithk86/asyncio-service.git@09996a98b5e32ccb3118df665b74b7969eb312e7
 attrs==21.2.0
 blinker==1.4
-certifi==2021.5.30
-charset-normalizer==2.0.6
 click==8.0.1
 h11==0.12.0
 h2==4.0.0
 hpack==4.0.0
 Hypercorn==0.11.2
 hyperframe==6.0.1
-idna==3.2
 iniconfig==1.1.1
 itsdangerous==2.0.1
 Jinja2==3.0.1
@@ -24,11 +21,7 @@ py==1.10.0
 pyparsing==2.4.7
 pytest==6.2.5
 pytest-asyncio==0.15.1
-pytest-base-url==1.4.2
 Quart==0.15.1
-requests==2.26.0
 toml==0.10.2
-typing-extensions==3.10.0.2
-urllib3==1.26.7
 Werkzeug==2.0.1
 wsproto==1.0.0
