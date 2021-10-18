@@ -11,7 +11,10 @@ from uuid import UUID, uuid4
 
 from asyncio_multisubscriber_queue import MultisubscriberQueue
 from async_timeout import timeout
-from quart import Blueprint, make_response, jsonify, Quart, request, Response, session, websocket
+from quart import (
+    Blueprint, make_response, jsonify,
+    Quart, request, Response, session, websocket
+)
 from werkzeug.datastructures import Headers
 
 from .errors import EventBrokerError, EventBrokerAuthError
@@ -212,7 +215,7 @@ class EventBroker(MultisubscriberQueue):
         Override subscribe() to add a timeout for the keepalive event
 
         """
-        with self.queue_context() as q:
+        with self.queue() as q:
             while True:
                 try:
                     async with timeout(self.keepalive):
