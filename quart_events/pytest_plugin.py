@@ -58,14 +58,12 @@ class EventsCatcher(MultisubscriberQueue, AsyncioService):
         r = await _client.get(f'{self.blueprint_path}/auth')
         assert r.status_code == 200
         data = await r.get_json()
-        token = data.get('token')
         url = f'{self.blueprint_path}/ws'
 
         if self.namespace:
             url = f'{url}/{self.namespace}'
 
         async with _client.websocket(url) as ws:
-            await ws.send(token)
             while self.running:
                 try:
                     with Timeout(1):

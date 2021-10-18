@@ -8,51 +8,6 @@ from async_timeout import timeout
 
 
 @pytest.mark.asyncio
-async def test_bad_token(app_test_client):
-    # test sending "123" as the token
-    async with app_test_client.websocket('/events/ws') as ws:
-        await ws.send('123')
-        wsdata_raw = await ws.receive()
-        wsdata = json.loads(wsdata_raw)
-        assert wsdata.get('error') == 'token must be a uuid'
-    # test using a randomly generated uuid
-    async with app_test_client.websocket('/events/ws') as ws:
-        await ws.send(str(uuid4()))
-        wsdata_raw = await ws.receive()
-        wsdata = json.loads(wsdata_raw)
-        assert wsdata.get('error') == 'token does not exist'
-
-
-@pytest.mark.asyncio
-async def test_not_sending_token(app_test_client):
-    async def send():
-        await asyncio.sleep(.25)
-        await app_test_client.get('/send/event0')
-        await app_test_client.get('/send/event1')
-        await app_test_client.get('/send/event2')
-
-    loop = asyncio.get_running_loop()
-    # subscribe to events
-    task = loop.create_task(send())
-
-    async with app_test_client.websocket('/events/ws') as ws:
-        try:
-            async with timeout(1) as this_timeout:
-                await ws.receive()
-        except asyncio.TimeoutError:
-            pass
-        assert this_timeout.expired is True
-
-
-@pytest.mark.asyncio
-async def test_token_receive_timeout(app_test_client):
-    async with app_test_client.websocket('/events/ws') as ws:
-        msg = await ws.receive()
-        data = json.loads(msg)
-        assert data.get('error') == 'no authentication token received'
-
-
-@pytest.mark.asyncio
 async def test_websocket(app_test_client, quart_events_catcher):
     async with quart_events_catcher.events(3) as _events:
         await app_test_client.get('/send/event0')

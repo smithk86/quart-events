@@ -36,22 +36,6 @@ def app_test_client(app):
 
 @pytest.fixture(scope='session')
 @pytest.mark.asyncio
-async def token(app_test_client):
-    r = await app_test_client.get('/events/auth')
-    data = await r.get_json()
-    return data.get('token')
-
-
-@pytest.fixture(scope='session')
-@pytest.mark.asyncio
-async def token(app_test_client):
-    r = await app_test_client.get('/events/auth')
-    data = await r.get_json()
-    return data.get('token')
-
-
-@pytest.fixture(scope='session')
-@pytest.mark.asyncio
 async def event_catcher_with_namespace(app):
     """ catch events as they happen in the background """
     async with EventsCatcher(

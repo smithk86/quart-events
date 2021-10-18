@@ -10,27 +10,19 @@
             if (wsEvents) wsEvents.close()
         }
 
-        var auth_token = function(callback) {
-            $.getJSON('/events/auth', function(data) {
-                callback(data.token)
-            })
-        }
-
         var enable_websocket = function() {
-            auth_token(function(token) {
-                var ws_protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://'
-                wsEvents = new WebSocket(ws_protocol + window.location.host + '/events/ws')
-                wsEvents.onopen = function() {
-                    wsEvents.send(token)
+            var ws_protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://'
+            wsEvents = new WebSocket(ws_protocol + window.location.host + '/events/ws')
+            wsEvents.onopen = function() {
+                wsEvents.send(token)
+            }
+            wsEvents.onmessage = function(event) {
+                var eventData = JSON.parse(event.data)
+                if (eventData.event == 'message' || eventData.event == 'uuid') {
+                    var tbody = $('table tbody')
+                    tbody.prepend('<tr><td>' + eventData.event + '</td><td>' + eventData.data + '</td></tr>')
                 }
-                wsEvents.onmessage = function(event) {
-                    var eventData = JSON.parse(event.data)
-                    if (eventData.event == 'message' || eventData.event == 'uuid') {
-                        var tbody = $('table tbody')
-                        tbody.prepend('<tr><td>' + eventData.event + '</td><td>' + eventData.data + '</td></tr>')
-                    }
-                }
-            })
+            }
         }
 
         $(document).ready(function() {
