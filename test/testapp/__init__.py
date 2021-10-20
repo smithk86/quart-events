@@ -14,26 +14,29 @@ def create_app():
     app = Quart(__name__, template_folder=dir_)
     app.config['TEMPLATES_AUTO_RELOAD'] = True
     app.config['SECRET_KEY'] = b'00000000000000000000000000000000'
+    app.events_callback_data = {
+        'auth': False,
+        'verify': False,
+        'send': False
+    }
 
     @app.before_serving
     def register_extensions():
         # provide a very low keepalive interval to make testing faster
         events = EventBroker(app, keepalive=1)
 
-        @events.on_auth
-        def _on_auth():
-            # print('init')
-            pass
+        @events.auth
+        def auth():
+            current_app.events_callback_data['auth'] = True
 
-        @events.on_verify
-        def _on_verify():
-            # print('verify')
-            pass
+        @events.verify
+        def verify():
+            current_app.events_callback_data['verify'] = True
 
-        @events.on_send
-        def _on_send(data):
-            # print(f'send: {data}')
-            pass
+        @events.send
+        def send(data):
+            assert isinstance(data, dict)
+            current_app.events_callback_data['send'] = True
 
     @app.route('/')
     async def index():

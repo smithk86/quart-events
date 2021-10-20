@@ -58,8 +58,9 @@ class EventsCatcher(MultisubscriberQueue, AsyncioService):
         r = await _client.get(f'{self.blueprint_path}/auth')
         assert r.status_code == 200
         data = await r.get_json()
-        url = f'{self.blueprint_path}/ws'
+        assert data['authorized'] is True
 
+        url = f'{self.blueprint_path}/ws'
         if self.namespace:
             url = f'{url}/{self.namespace}'
 

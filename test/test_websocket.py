@@ -8,7 +8,14 @@ from async_timeout import timeout
 
 
 @pytest.mark.asyncio
-async def test_websocket(app_test_client, quart_events_catcher):
+async def test_auth_callbacks(app):
+    assert app.events_callback_data['auth'] is False
+    assert app.events_callback_data['verify'] is False
+    assert app.events_callback_data['send'] is False
+
+
+@pytest.mark.asyncio
+async def test_websocket(app, app_test_client, quart_events_catcher):
     async with quart_events_catcher.events(3) as _events:
         await app_test_client.get('/send/event0')
         await app_test_client.get('/send/event1')
@@ -17,6 +24,10 @@ async def test_websocket(app_test_client, quart_events_catcher):
     assert len(_events) == 3
     for i, _event in enumerate(_events):
         assert _event.get('data') == f'event{i}'
+
+    assert app.events_callback_data['auth'] is True
+    assert app.events_callback_data['verify'] is True
+    assert app.events_callback_data['send'] is True
 
 
 @pytest.mark.asyncio

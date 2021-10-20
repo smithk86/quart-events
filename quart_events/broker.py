@@ -68,13 +68,13 @@ class EventBroker(MultisubscriberQueue):
         app.register_blueprint(self.create_blueprint(), url_prefix=url_prefix)
         return self
 
-    def on_auth(self, callable_: Callable):
+    def auth(self, callable_: Callable):
         self._auth_callbacks.append(callable_)
 
-    def on_verify(self, callable_: Callable):
+    def verify(self, callable_: Callable):
         self._verify_callbacks.append(callable_)
 
-    def on_send(self, callable_: Callable):
+    def send(self, callable_: Callable):
         self._send_callbacks.append(callable_)
 
     @staticmethod
@@ -85,7 +85,13 @@ class EventBroker(MultisubscriberQueue):
             else:
                 _callable(*args)
 
-    async def auth(self) -> None:
+    def _get_token(self, token: str) -> Union[UUID, None]:
+        for _token in self._tokens:
+            if str(_token) == token:
+                return _token
+        raise RuntimeError(f'token was not found: {token}')
+
+    async def authorize_websocket(self) -> None:
         if self._auth_enabled is False:
             return
         elif 'quart_events' not in session:
@@ -94,24 +100,32 @@ class EventBroker(MultisubscriberQueue):
         try:
             await self._execute_callbacks(self._auth_callbacks)
             _token = uuid4()
-            session['quart_events']['date'] = datetime.now()
-            session['quart_events']['token'] = _token
+            session['quart_events'] = {
+                'date': datetime.now(),
+                'token': str(_token)
+            }
             self._tokens.append(_token)
         except Exception as e:
+            logger.exception(e)
             session['quart_events']['token'] = None
             raise
 
-    async def verify(self) -> None:
+    async def verify_auth(self) -> None:
         if self._auth_enabled is False:
             return
 
         _is_authorized = False
+        _token_str = session['quart_events'].pop('token')
+        if not _token_str:
+            return
+
         try:
-            _token = session['quart_events'].pop('token')
-            if _token in self._tokens:
+            _token: UUID = self._get_token(_token_str)
+            if _token and _token in self._tokens:
                 self._tokens.remove(_token)
                 _is_authorized = True
-        except Exception:
+        except Exception as e:
+            logger.exception(e)
             _is_authorized = False
 
         if _is_authorized is not True:
@@ -138,8 +152,8 @@ class EventBroker(MultisubscriberQueue):
 
                 session['quart_events']['token'] = None
 
-                await self.auth()
-                return jsonify(authorized=isinstance(session['quart_events']['token'], UUID))
+                await self.authorize_websocket()
+                return jsonify(authorized=isinstance(session['quart_events']['token'], str))
             except EventBrokerAuthError as e:
                 r = jsonify(authorized=False, error=str(e))
                 r.status_code = 401
@@ -155,12 +169,11 @@ class EventBroker(MultisubscriberQueue):
         async def ws(namespace: Union[str, None] = None) -> Response:
             if self._auth_enabled:
                 try:
-                    await self.verify()
+                    await self.verify_auth()
                 except EventBrokerAuthError as e:
                     await websocket.send_json({'event': 'error', 'message': str(e)})
                     return
                 except Exception as e:
-                    logger.warning(e)
                     await websocket.send_json({'event': 'error', 'message': 'not authorized'})
                     return
 
