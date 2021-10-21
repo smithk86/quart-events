@@ -6,7 +6,7 @@ import functools
 import json
 from copy import copy
 from datetime import datetime
-from typing import AsyncGenerator, Union
+from typing import Any, AsyncGenerator, Callable, List, Union
 from uuid import UUID, uuid4
 
 from asyncio_multisubscriber_queue import MultisubscriberQueue
@@ -49,43 +49,42 @@ class EventBroker(MultisubscriberQueue):
 
         self.keepalive = keepalive
         self.encoding = encoding
-        self._auth_enabled = auth
-        self._auth_callbacks = list()
-        self._verify_callbacks = list()
-        self._send_callbacks = list()
-        self._tokens = list()
+        self._auth_enabled: bool = auth
+        self._auth_callbacks: List[Callable] = list()
+        self._verify_callbacks: List[Callable] = list()
+        self._send_callbacks: List[Callable] = list()
+        self._tokens: List[UUID] = list()
         super().__init__()
 
         if app:
             self.init_app(app, url_prefix)
 
-    def init_app(self, app: Quart, url_prefix: str) -> Quart:
+    def init_app(self, app: Quart, url_prefix: str) -> None:
         """
         Register the blueprint with the application
 
         """
-        app.events = self
+        app.extensions['events'] = self
         app.register_blueprint(self.create_blueprint(), url_prefix=url_prefix)
-        return self
 
-    def auth(self, callable_: Callable):
+    def auth(self, callable_: Callable) -> None:
         self._auth_callbacks.append(callable_)
 
-    def verify(self, callable_: Callable):
+    def verify(self, callable_: Callable) -> None:
         self._verify_callbacks.append(callable_)
 
-    def send(self, callable_: Callable):
+    def send(self, callable_: Callable) -> None:
         self._send_callbacks.append(callable_)
 
     @staticmethod
-    async def _execute_callbacks(callbacks: List[Callable], *args):
+    async def _execute_callbacks(callbacks: List[Callable], *args) -> None:
         for _callable in callbacks:
             if asyncio.iscoroutinefunction(_callable):
                 await _callable(*args)
             else:
                 _callable(*args)
 
-    def _get_token(self, token: str) -> Union[UUID, None]:
+    def _get_token(self, token: str) -> UUID:
         for _token in self._tokens:
             if str(_token) == token:
                 return _token
@@ -166,7 +165,7 @@ class EventBroker(MultisubscriberQueue):
 
         @blueprint.websocket('/ws')
         @blueprint.websocket('/ws/<namespace>')
-        async def ws(namespace: Union[str, None] = None) -> Response:
+        async def ws(namespace: Union[str, None] = None) -> None:
             if self._auth_enabled:
                 try:
                     await self.verify_auth()
@@ -206,22 +205,15 @@ class EventBroker(MultisubscriberQueue):
 
         return blueprint
 
-    async def put(self, event=None, **data) -> None:
+    async def put(self, **data: Any) -> None:
         """
         Put a new data on the event broker
 
-        Parameters:
-            event: name of the event [optional]
-            data: event data keyword arguments
-
         """
+        if 'event' not in data:
+            data['event'] = None
 
-        if event:
-            _data = {'event': event}
-        else:
-            _data = {}
-        _data.update(data)
-        await super().put(_data)
+        await super().put(data)
 
     async def subscribe(self) -> AsyncGenerator:
         """

@@ -26,6 +26,7 @@ setup(
     description='quart extension to facilitate event message brokering',
     long_description=long_description,
     long_description_content_type='text/markdown',
+    package_data={'quart_events': ['py.typed']},
     packages=['quart_events'],
     entry_points={'pytest11': ['quart_events = quart_events.pytest_plugin']},
     install_requires=[
@@ -37,8 +38,11 @@ setup(
         'pytest-runner'
     ],
     tests_require=[
+        'asyncio-service',
+        'mypy',
         'pytest',
-        'pytest-asyncio'
+        'pytest-asyncio',
+        'pytest-mypy'
     ],
     classifiers=[
         'Environment :: Web Environment',

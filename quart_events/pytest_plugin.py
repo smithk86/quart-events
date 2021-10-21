@@ -9,7 +9,7 @@ import pytest
 from asyncio_multisubscriber_queue import MultisubscriberQueue
 from asyncio_service import AsyncioService, asyncio_service
 from quart import Quart
-from typing import Union
+from typing import Any, List, Union
 
 
 from async_timeout import timeout as Timeout
@@ -22,7 +22,7 @@ def pytest_addoption(parser):
 
 @pytest.fixture(scope='session')
 @pytest.mark.asyncio
-async def quart_events_catcher(app: Quart, request):
+async def quart_events_catcher(app: Quart, request: pytest.SubRequest):
     def _getini(name, default=None):
         """
             getini returns an empty string instead of None;
@@ -67,7 +67,7 @@ class EventsCatcher(MultisubscriberQueue, AsyncioService):
         async with _client.websocket(url) as ws:
             while self.running:
                 try:
-                    with Timeout(1):
+                    async with Timeout(1):
                         data = await ws.receive()
                 except asyncio.TimeoutError:
                     data = None
@@ -96,15 +96,15 @@ class CaughtEvents(AsyncioService):
         self.expected = expected
         self.timeout = timeout
         self.namespace = namespace
-        self._events = list()
+        self._events: List[Any] = list()
 
     def __repr__(self) -> str:
         return f'{type(self).__name__} object events={self.event_names()}'
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._events)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator:
         yield from iter(self._events)
 
     async def run(self):
@@ -122,8 +122,8 @@ class CaughtEvents(AsyncioService):
                 if len(self._events) >= self.expected:
                     return
 
-    def event_names(self):
+    def event_names(self) -> List[str]:
         return [event.get('event') for event in self._events]
 
-    def assert_events(self, event_list):
+    def assert_events(self, event_list: List[str]) -> None:
         assert event_list == self.event_names()

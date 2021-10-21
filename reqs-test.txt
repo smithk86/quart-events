@@ -1,10 +1,11 @@
 aiofiles==0.7.0
 async-timeout==3.0.1
-asyncio-multisubscriber-queue @ git+https://github.com/smithk86/asyncio-multisubscriber-queue.git@3eddb39bd688066412ea22213c660bff0ffa3827
-asyncio-service @ git+https://github.com/smithk86/asyncio-service.git@09996a98b5e32ccb3118df665b74b7969eb312e7
+asyncio-multisubscriber-queue @ git+https://github.com/smithk86/asyncio-multisubscriber-queue.git@dbc24e138632aacfe797d875f417039753d4a83b
+asyncio-service @ git+https://github.com/smithk86/asyncio-service.git@02dd98bfae878ace0b5e6d1fe8eb4a645e0c6d34
 attrs==21.2.0
 blinker==1.4
 click==8.0.1
+filelock==3.3.1
 h11==0.12.0
 h2==4.0.0
 hpack==4.0.0
@@ -14,6 +15,8 @@ iniconfig==1.1.1
 itsdangerous==2.0.1
 Jinja2==3.0.1
 MarkupSafe==2.0.1
+mypy==0.910
+mypy-extensions==0.4.3
 packaging==21.0
 pluggy==1.0.0
 priority==2.0.0
@@ -21,7 +24,9 @@ py==1.10.0
 pyparsing==2.4.7
 pytest==6.2.5
 pytest-asyncio==0.15.1
+pytest-mypy==0.8.1
 Quart==0.15.1
 toml==0.10.2
+typing-extensions==3.10.0.2
 Werkzeug==2.0.1
 wsproto==1.0.0
