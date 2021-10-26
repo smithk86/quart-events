@@ -117,8 +117,12 @@ class EventBroker(MultisubscriberQueue):
             return
 
         _is_authorized = False
-        _token_str = session['quart_events']['token']
-        del session['quart_events']['token']
+        _token_str = None
+
+        if 'token' in session['quart_events']:
+            _token_str = session['quart_events']['token']
+            del session['quart_events']['token']
+
         if not _token_str:
             return
 
@@ -210,7 +214,7 @@ class EventBroker(MultisubscriberQueue):
 
         return blueprint
 
-    async def put(self, **data: Any) -> None:
+    async def put(self, **data: Any) -> None:  # type: ignore
         """
         Put a new data on the event broker
 

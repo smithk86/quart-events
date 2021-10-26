@@ -6,10 +6,11 @@ import json
 from contextlib import asynccontextmanager
 
 import pytest
+from _pytest.fixtures import SubRequest
 from asyncio_multisubscriber_queue import MultisubscriberQueue
 from asyncio_service import AsyncioService, asyncio_service
 from quart import Quart
-from typing import Any, List, Union
+from typing import Any, Iterator, List, Union
 
 
 from async_timeout import timeout as Timeout
@@ -22,7 +23,7 @@ def pytest_addoption(parser):
 
 @pytest.fixture(scope='session')
 @pytest.mark.asyncio
-async def quart_events_catcher(app: Quart, request: pytest.SubRequest):
+async def quart_events_catcher(app: Quart, request: SubRequest):
     def _getini(name, default=None):
         """
             getini returns an empty string instead of None;

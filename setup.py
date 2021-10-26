@@ -2,10 +2,11 @@
 
 import os.path
 
-from setuptools import setup
+from setuptools import setup  # type: ignore
 
 
 dir_ = os.path.abspath(os.path.dirname(__file__))
+
 # get the version to include in setup()
 with open(f'{dir_}/quart_events/__init__.py') as fh:
     for line in fh:
