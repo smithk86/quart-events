@@ -23,6 +23,9 @@ from .errors import EventBrokerError, EventBrokerAuthError
 logger = logging.getLogger(__name__)
 
 
+KeepAlive = object()
+
+
 class EventBroker(MultisubscriberQueue):
     def __init__(
         self,
@@ -186,17 +189,18 @@ class EventBroker(MultisubscriberQueue):
                         * if a namespace is given but does not match
                         the "event" field, skip this event.
                     """
-                    if (
+                    if data is KeepAlive:
+                        await websocket.send_json({'event': 'keepalive'})
+                    elif (
                         namespace and (
                             data.get('event') is None or
                             not data['event'].startswith(namespace)
                         )
                     ):
                         continue
-
-                    await self._execute_callbacks(self._send_callbacks, data)
-
-                    await websocket.send_json(data)
+                    else:
+                        await self._execute_callbacks(self._send_callbacks, data)
+                        await websocket.send_json(data)
                 except asyncio.CancelledError:
                     break
                 except Exception as e:
@@ -227,7 +231,7 @@ class EventBroker(MultisubscriberQueue):
                     async with timeout(self.keepalive):
                         val = await q.get()
                 except asyncio.TimeoutError:
-                    yield {'event': 'keepalive'}
+                    yield KeepAlive
                 else:
                     if val is StopAsyncIteration:
                         break
