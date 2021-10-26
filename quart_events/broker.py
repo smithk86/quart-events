@@ -114,7 +114,8 @@ class EventBroker(MultisubscriberQueue):
             return
 
         _is_authorized = False
-        _token_str = session['quart_events'].pop('token')
+        _token_str = session['quart_events']['token']
+        del session['quart_events']['token']
         if not _token_str:
             return
 
