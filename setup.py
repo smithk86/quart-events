@@ -19,7 +19,7 @@ with open(f'{dir_}/README.md') as fh:
 
 setup(
     name='quart-events',
-    version=__VERSION__,
+    version=__VERSION__,  # type: ignore
     license='MIT',
     author='Kyle Smith',
     author_email='smithk86@gmail.com',

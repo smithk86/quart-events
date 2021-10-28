@@ -3,17 +3,19 @@ from __future__ import annotations
 import asyncio
 import collections.abc
 import json
+import logging
 from contextlib import asynccontextmanager
 
 import pytest
 from _pytest.fixtures import SubRequest
+from async_timeout import timeout as Timeout
 from asyncio_multisubscriber_queue import MultisubscriberQueue
 from asyncio_service import AsyncioService, asyncio_service
 from quart import Quart
-from typing import Any, Iterator, List, Union
+from typing import Any, Iterator, List, Optional
 
 
-from async_timeout import timeout as Timeout
+logger = logging.getLogger(__name__)
 
 
 def pytest_addoption(parser):
@@ -45,8 +47,8 @@ class EventsCatcher(MultisubscriberQueue, AsyncioService):
     def __init__(
         self,
         app: Quart,
-        blueprint_path: Union[str, None],
-        namespace: Union[str, None] = None
+        blueprint_path: Optional[str],
+        namespace: Optional[str] = None
     ):
         MultisubscriberQueue.__init__(self)
         AsyncioService.__init__(self)
@@ -54,7 +56,11 @@ class EventsCatcher(MultisubscriberQueue, AsyncioService):
         self.blueprint_path = blueprint_path
         self.namespace = namespace
 
-    async def run(self):
+        @self.after
+        async def _close(**kwargs):
+            await self.close()
+
+    async def _subscribe_to_events(self):
         _client = self.app.test_client()
         r = await _client.get(f'{self.blueprint_path}/auth')
         assert r.status_code == 200
@@ -69,11 +75,23 @@ class EventsCatcher(MultisubscriberQueue, AsyncioService):
             while self.running:
                 try:
                     async with Timeout(1):
-                        data = await ws.receive()
+                        _data = await ws.receive()
+                        yield json.loads(_data)
                 except asyncio.TimeoutError:
-                    data = None
-                if data:
-                    await self.put(json.loads(data))
+                    yield None
+
+    async def run(self):
+        while self.running:
+            async for _event in self._subscribe_to_events():
+                if not self.running:
+                    break
+                elif _event is None:
+                    continue
+                elif _event.get('event') == '_token_expire':
+                    logger.warning('token is now expired')
+                    break
+                else:
+                    await self.put(_event)
 
     def events(self, expected, timeout=5, namespace=None):
         return CaughtEvents(
@@ -90,7 +108,7 @@ class CaughtEvents(AsyncioService):
         catcher: EventsCatcher,
         expected: int,
         timeout: int = 5,
-        namespace: Union[str, None] = None
+        namespace: Optional[str] = None
     ):
         super().__init__()
         self.catcher = catcher

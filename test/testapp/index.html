@@ -6,27 +6,28 @@
     <script type="text/javascript">
         var wsEvents
 
-        var close = function() {
-            if (wsEvents) wsEvents.close()
-        }
-
-        var enable_websocket = function() {
-            var ws_protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://'
-            wsEvents = new WebSocket(ws_protocol + window.location.host + '/events/ws')
-            wsEvents.onopen = function() {
-                wsEvents.send(token)
-            }
-            wsEvents.onmessage = function(event) {
-                var eventData = JSON.parse(event.data)
-                if (eventData.event == 'message' || eventData.event == 'uuid') {
-                    var tbody = $('table tbody')
-                    tbody.prepend('<tr><td>' + eventData.event + '</td><td>' + eventData.data + '</td></tr>')
+        var start_events = function() {
+            $.getJSON('/events/auth', function(data) {
+                var ws_protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://'
+                wsEvents = new WebSocket(`${ws_protocol}${window.location.host}/events/ws`)
+                wsEvents.onopen = function() {
+                    wsEvents.send(token)
                 }
-            }
+                wsEvents.onmessage = function(event) {
+                    var eventData = JSON.parse(event.data)
+                    if (eventData.event == '_token_expire') {
+                        wsEvents.close()
+                        start_events()
+                    } else if (eventData.event == 'message' || eventData.event == 'uuid') {
+                        var tbody = $('table tbody')
+                        tbody.prepend('<tr><td>' + eventData.event + '</td><td>' + eventData.data + '</td></tr>')
+                    }
+                }
+            })
         }
 
         $(document).ready(function() {
-            enable_websocket()
+            start_events()
             $('#sendMessageButton').click(function() {
                 if ($('#sendMessageText').val().length > 0) {
                     $.get('/send/' + $('#sendMessageText').val())

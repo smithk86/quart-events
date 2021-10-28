@@ -23,7 +23,12 @@ def create_app():
     @app.before_serving
     def register_extensions():
         # provide a very low keepalive interval to make testing faster
-        events = current_app.events = EventBroker(app, keepalive=1)
+        events = current_app.events = EventBroker(
+            app,
+            keepalive=1,
+            auth=True,
+            token_expire_seconds=5
+        )
 
         @events.auth
         def auth():

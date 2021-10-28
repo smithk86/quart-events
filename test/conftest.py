@@ -1,5 +1,5 @@
 # add the project directory to the pythonpath
-import path_patch
+import _path_patch
 
 # add plugin
 pytest_plugins = ['quart_events.pytest_plugin']

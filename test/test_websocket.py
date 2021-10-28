@@ -56,19 +56,17 @@ async def test_websocket_events(app_test_client, quart_events_catcher):
 
 @pytest.mark.asyncio
 async def test_keepalive(app_test_client, quart_events_catcher):
-    async with quart_events_catcher.events(4) as _events:
+    async with quart_events_catcher.events(1) as _events:
         pass
 
     _events.assert_events([
-        'keepalive',
-        'keepalive',
-        'keepalive',
-        'keepalive'
+        '_keepalive'
     ])
 
     # assert event values
     for _event in _events:
-        assert _event['event'] == 'keepalive'
+        assert _event['event'] == '_keepalive'
+        break
 
 
 @pytest.mark.asyncio
