@@ -152,7 +152,6 @@ class EventBroker(MultisubscriberQueue):
                 session['quart_events_token'] = asdict(_token)
                 self._tokens[str(_token.value)] = _token
         except Exception as e:
-            logger.exception(e)
             if 'quart_events_token' in session:
                 del session['quart_events_token']
             raise
