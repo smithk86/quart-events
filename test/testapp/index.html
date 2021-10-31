@@ -10,9 +10,6 @@
             $.getJSON('/events/auth', function(data) {
                 var ws_protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://'
                 wsEvents = new WebSocket(`${ws_protocol}${window.location.host}/events/ws`)
-                wsEvents.onopen = function() {
-                    wsEvents.send(token)
-                }
                 wsEvents.onmessage = function(event) {
                     var eventData = JSON.parse(event.data)
                     if (eventData.event == '_token_expire') {
@@ -42,7 +39,7 @@
     </script>
 </head>
 <body>
-<div class="container">
+<div class="container m-4">
     <div class="row">
         <div class="col-sm-6">
             <div class="form-group">

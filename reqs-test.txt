@@ -1,7 +1,6 @@
 aiofiles==0.7.0
-async-timeout==3.0.1
 asyncio-multisubscriber-queue @ git+https://github.com/smithk86/asyncio-multisubscriber-queue.git@dbc24e138632aacfe797d875f417039753d4a83b
-asyncio-service @ git+https://github.com/smithk86/asyncio-service.git@02dd98bfae878ace0b5e6d1fe8eb4a645e0c6d34
+asyncio-service @ git+https://github.com/smithk86/asyncio-service.git@81ee30cd4bfda3075e5059a1154f7a25f6d83f42
 attrs==21.2.0
 blinker==1.4
 click==8.0.1

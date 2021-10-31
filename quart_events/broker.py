@@ -11,7 +11,6 @@ from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
 from uuid import UUID, uuid4
 
 from asyncio_multisubscriber_queue import MultisubscriberQueue
-from async_timeout import timeout
 from quart import (
     Blueprint, make_response, jsonify,
     Quart, request, Response, session, websocket
@@ -270,12 +269,11 @@ class EventBroker(MultisubscriberQueue):
         with self.queue() as q:
             while True:
                 try:
-                    async with timeout(self.keepalive):
-                        val = await q.get()
+                    _value = await asyncio.wait_for(q.get(), self.keepalive)
                 except asyncio.TimeoutError:
                     yield KeepAlive
                 else:
-                    if val is StopAsyncIteration:
+                    if _value is StopAsyncIteration:
                         break
                     else:
-                        yield val
+                        yield _value

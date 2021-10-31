@@ -36,10 +36,10 @@ def app_test_client(app):
 
 @pytest.fixture(scope='session')
 @pytest.mark.asyncio
-async def event_catcher_with_namespace(app):
+async def event_catcher_with_namespace(app_test_client):
     """ catch events as they happen in the background """
     async with EventsCatcher(
-        app,
+        app_test_client=app_test_client,
         blueprint_path='/events',
         namespace='ns1'
     ) as _catcher:

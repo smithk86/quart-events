@@ -4,7 +4,6 @@ from uuid import uuid4
 
 import pytest
 import quart
-from async_timeout import timeout
 
 
 @pytest.mark.asyncio
