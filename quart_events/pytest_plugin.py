@@ -67,7 +67,7 @@ class EventsCatcher(MultisubscriberQueue, AsyncioService):
         self._ws_ready: asyncio.Event = asyncio.Event()
 
         @self.after
-        async def _teardown(**kwargs):
+        async def _teardown(self, **kwargs):
             await self.close()
 
     async def ready(self) -> None:
