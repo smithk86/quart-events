@@ -38,7 +38,7 @@ class Token:
     def new():
         return Token(
             value=uuid4(),
-            date=datetime.now()
+            date=datetime.utcnow()
         )
 
 
@@ -127,7 +127,7 @@ class EventBroker(MultisubscriberQueue):
         if type(token) is NullToken:
             return True
 
-        _expire_time = datetime.now() - timedelta(seconds=self._token_expire_seconds)
+        _expire_time = datetime.utcnow() - timedelta(seconds=self._token_expire_seconds)
         return token.date < _expire_time
 
     def clear_expired_tokens(self):

@@ -12,4 +12,3 @@ if sys.version_info < __MIN_PYTHON__:
 
 from .broker import EventBroker
 from .errors import EventBrokerError, EventBrokerAuthError
-
