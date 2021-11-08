@@ -164,7 +164,10 @@ class CaughtEvents:
         return self
 
     async def __aexit__(self, *args, **kwargs):
-        await asyncio.wait_for(self._task, self._timout)
+        try:
+            await asyncio.wait_for(self._task, self._timout)
+        except asyncio.TimeoutError:
+            pass
         await self._task
 
     def __del__(self):
