@@ -102,3 +102,9 @@ async def test_namespaced_events2(app_test_client, quart_events_catcher):
     assert _event_list[0]['event'] == 'ns0:test0'
     assert _event_list[1]['data'] == '8e7e1f98-9df1-42cf-8896-aeba658053d3'
     assert _event_list[1]['event'] == 'ns0:test1'
+
+
+@pytest.mark.asyncio
+async def test_plugin_timeout(app_test_client, quart_events_catcher):
+    async with quart_events_catcher.events(5, namespace='ns0', timeout=1) as _events:
+        await app_test_client.get('/generate')
