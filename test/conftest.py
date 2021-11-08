@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 # add the project directory to the pythonpath
 import _path_patch
+
 
 # add plugin
 pytest_plugins = ['quart_events.pytest_plugin']
 
+
 import asyncio
+from typing import TYPE_CHECKING
 
 import pytest
 from quart_events.pytest_plugin import EventsCatcher
@@ -12,9 +17,15 @@ from quart_events.pytest_plugin import EventsCatcher
 from testapp import create_app
 
 
+if TYPE_CHECKING:
+    from _pytest.fixtures import SubRequest
+    from quart.typing import Quart, TestClientProtocol
+    from typing import AsyncGenerator, Generator
+
+
 # override the default event_loop fixture
 @pytest.fixture(scope='session')
-def event_loop():
+def event_loop() -> Generator:
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
@@ -22,7 +33,7 @@ def event_loop():
 
 @pytest.fixture(scope='session')
 @pytest.mark.asyncio
-async def app():
+async def app() -> AsyncGenerator:
     app_ = create_app()
     await app_.startup()
     yield app_
@@ -30,17 +41,23 @@ async def app():
 
 
 @pytest.fixture(scope='session')
-def app_test_client(app):
+def app_test_client(app: Quart) -> TestClientProtocol:
     return app.test_client()
 
 
 @pytest.fixture(scope='session')
 @pytest.mark.asyncio
-async def event_catcher_with_namespace(app_test_client):
+async def event_catcher_with_namespace(app_test_client: TestClientProtocol, request: SubRequest):
     """ catch events as they happen in the background """
-    async with EventsCatcher(
+    _catcher = EventsCatcher(
         app_test_client=app_test_client,
         blueprint_path='/events',
         namespace='ns1'
-    ) as _catcher:
+    )
+
+    def teardown():
+        _catcher._stop.set()
+    request.addfinalizer(teardown)
+
+    async with _catcher:
         yield _catcher

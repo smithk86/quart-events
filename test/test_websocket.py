@@ -88,7 +88,7 @@ async def test_namespaced_events(app_test_client, event_catcher_with_namespace):
 
 @pytest.mark.asyncio
 async def test_namespaced_events2(app_test_client, quart_events_catcher):
-    async with quart_events_catcher.events(3, namespace='ns0') as _events:
+    async with quart_events_catcher.events(2, namespace='ns0') as _events:
         await app_test_client.get('/generate')
 
     _events.assert_events([

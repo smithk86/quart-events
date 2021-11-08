@@ -31,7 +31,6 @@ setup(
     packages=['quart_events'],
     entry_points={'pytest11': ['quart_events = quart_events.pytest_plugin']},
     install_requires=[
-        'async-timeout',
         'asyncio-multisubscriber-queue',
         'quart'
     ],
@@ -39,7 +38,6 @@ setup(
         'pytest-runner'
     ],
     tests_require=[
-        'asyncio-service',
         'mypy',
         'pytest',
         'pytest-asyncio',
