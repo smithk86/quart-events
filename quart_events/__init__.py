@@ -1,8 +1,9 @@
 import sys
 
 
-__version__ = '0.3.3'
-__MIN_PYTHON__ = (3, 7)
+__VERSION__ = '0.4.0'
+__DATE__ = '2021-11-08'
+__MIN_PYTHON__ = (3, 8)
 
 
 if sys.version_info < __MIN_PYTHON__:

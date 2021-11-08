@@ -2,14 +2,15 @@
 
 import os.path
 
-from setuptools import setup
+from setuptools import setup  # type: ignore
 
 
 dir_ = os.path.abspath(os.path.dirname(__file__))
+
 # get the version to include in setup()
 with open(f'{dir_}/quart_events/__init__.py') as fh:
     for line in fh:
-        if '__version__' in line:
+        if '__VERSION__' in line:
             exec(line)
 # get long description from README.md
 with open(f'{dir_}/README.md') as fh:
@@ -18,7 +19,7 @@ with open(f'{dir_}/README.md') as fh:
 
 setup(
     name='quart-events',
-    version=__version__,
+    version=__VERSION__,  # type: ignore
     license='MIT',
     author='Kyle Smith',
     author_email='smithk86@gmail.com',
@@ -26,9 +27,10 @@ setup(
     description='quart extension to facilitate event message brokering',
     long_description=long_description,
     long_description_content_type='text/markdown',
+    package_data={'quart_events': ['py.typed']},
     packages=['quart_events'],
+    entry_points={'pytest11': ['quart_events = quart_events.pytest_plugin']},
     install_requires=[
-        'async-timeout',
         'asyncio-multisubscriber-queue',
         'quart'
     ],
@@ -36,8 +38,10 @@ setup(
         'pytest-runner'
     ],
     tests_require=[
+        'mypy',
         'pytest',
-        'pytest-asyncio'
+        'pytest-asyncio',
+        'pytest-mypy'
     ],
     classifiers=[
         'Environment :: Web Environment',
