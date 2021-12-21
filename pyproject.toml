@@ -1,7 +1,7 @@
 [tool]
 [tool.poetry]
 name = "quart-events"
-version = "0.4.1-dev"
+version = "0.4.1"
 description = "aquart extension to facilitate event message brokering"
 authors = ["Kyle Smith <smithk86@smc3.com>"]
 license = "MIT"
