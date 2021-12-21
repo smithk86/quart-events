@@ -8,6 +8,7 @@ license = "MIT"
 readme = "README.md"
 repository = "https://github.com/smithk86/quart-events"
 classifiers = [
+    "Intended Audience :: Developers",
     "Environment :: Web Environment",
     "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
     "Topic :: Software Development :: Libraries :: Python Modules"
