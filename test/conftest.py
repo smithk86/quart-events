@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-# add the project directory to the pythonpath
-import _path_patch
-
-
 # add plugin
 pytest_plugins = ['quart_events.pytest_plugin']
 

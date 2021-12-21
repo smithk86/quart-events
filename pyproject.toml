@@ -1,0 +1,37 @@
+[tool]
+[tool.poetry]
+name = "quart-events"
+version = "0.4.1"
+description = "aquart extension to facilitate event message brokering"
+authors = ["Kyle Smith <smithk86@smc3.com>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/smithk86/quart-events"
+classifiers = [
+    "Intended Audience :: Developers",
+    "Environment :: Web Environment",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+quart = "^0.16.2"
+asyncio-multisubscriber-queue = "^0.3.0"
+
+[tool.poetry.dev-dependencies]
+mypy = "^0.920"
+pytest = "^6.2"
+pytest-asyncio = "^0.16.0"
+pytest-mypy = "^0.8.1"
+
+[tool.poetry.scripts]
+pytest = "pytest:main"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+addopts = "--mypy"
+filterwarnings = "ignore:Module already imported:pytest.PytestWarning"
