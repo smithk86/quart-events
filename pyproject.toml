@@ -14,7 +14,6 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules"
 ]
 
-
 [tool.poetry.dependencies]
 python = "^3.8"
 quart = "^0.16.2"
