@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-# add plugin
-pytest_plugins = ['quart_events.pytest_plugin']
-
-
 import asyncio
 from typing import TYPE_CHECKING
 
