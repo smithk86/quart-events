@@ -13,7 +13,7 @@ Please see [test/app.py](https://github.com/smithk86/quart-events/blob/main/test
 
 ## Change Log
 
-### [0.4.1] - 2021-12-21
+### [0.4.2] - 2021-12-23
 
 - Change build system from setuptools to poetry
 

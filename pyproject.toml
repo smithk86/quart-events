@@ -1,7 +1,7 @@
 [tool]
 [tool.poetry]
 name = "quart-events"
-version = "0.4.1"
+version = "0.4.2"
 description = "aquart extension to facilitate event message brokering"
 authors = ["Kyle Smith <smithk86@smc3.com>"]
 license = "MIT"
@@ -28,10 +28,12 @@ pytest-mypy = "^0.8.1"
 [tool.poetry.scripts]
 pytest = "pytest:main"
 
+[tool.poetry.plugins]
+pytest11 = { quart_events = "quart_events.pytest_plugin" }
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 addopts = "--mypy"
-filterwarnings = "ignore:Module already imported:pytest.PytestWarning"
