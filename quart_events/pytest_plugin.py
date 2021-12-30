@@ -23,14 +23,14 @@ logger = logging.getLogger(__name__)
 
 
 def pytest_addoption(parser):
-    parser.addini('quart_events_path', 'url path for quart-events blueprint')
-    parser.addini('quart_events_namespace', 'optional namespace for quart-events')
+    parser.addini("quart_events_path", "url path for quart-events blueprint")
+    parser.addini("quart_events_namespace", "optional namespace for quart-events")
 
 
 def ignore_cancelled_error(func):
     """
-        Decorator for functions that can be cancelled
-        without requiring any cleanup
+    Decorator for functions that can be cancelled
+    without requiring any cleanup
     """
 
     async def wrapper(*args, **kwargs):
@@ -38,16 +38,19 @@ def ignore_cancelled_error(func):
             await func(*args, **kwargs)
         except asyncio.CancelledError:
             pass
+
     return wrapper
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 @pytest.mark.asyncio
-async def quart_events_catcher(app_test_client: TestClientProtocol, request: SubRequest):
+async def quart_events_catcher(
+    app_test_client: TestClientProtocol, request: SubRequest
+):
     def _getini(name, default=None):
         """
-            getini returns an empty string instead of None;
-            this helper fixes that
+        getini returns an empty string instead of None;
+        this helper fixes that
         """
         _val = request.config.getini(name)
         return _val if len(_val) > 0 else default
@@ -55,12 +58,13 @@ async def quart_events_catcher(app_test_client: TestClientProtocol, request: Sub
     """ catch events from quart-events as they are generated in the background """
     _catcher = EventsCatcher(
         app_test_client=app_test_client,
-        blueprint_path=_getini('quart_events_path', default='/events'),
-        namespace=_getini('quart_events_namespace', default=None)
+        blueprint_path=_getini("quart_events_path", default="/events"),
+        namespace=_getini("quart_events_namespace", default=None),
     )
 
     def teardown():
         _catcher._stop.set()
+
     request.addfinalizer(teardown)
 
     async with _catcher:
@@ -72,7 +76,7 @@ class EventsCatcher(MultisubscriberQueue):
         self,
         app_test_client: TestClientProtocol,
         blueprint_path: Optional[str],
-        namespace: Optional[str] = None
+        namespace: Optional[str] = None,
     ):
         super().__init__()
         self.app_test_client = app_test_client
@@ -93,44 +97,41 @@ class EventsCatcher(MultisubscriberQueue):
 
     def __del__(self):
         if not self._task.done():
-            warnings.warn(f'task for {type(self).__name__} is still running')
+            warnings.warn(f"task for {type(self).__name__} is still running")
 
     @ignore_cancelled_error
     async def run(self):
-        r = await self.app_test_client.get(f'{self.blueprint_path}/auth')
+        r = await self.app_test_client.get(f"{self.blueprint_path}/auth")
 
         if r.status_code != 200:
             _payload = await r.get_data()
-            raise RuntimeError(f'auth request failed; payload: {_payload}')
+            raise RuntimeError(f"auth request failed; payload: {_payload}")
 
         data = await r.get_json()
-        assert data['authorized'] is True
+        assert data["authorized"] is True
 
-        url = f'{self.blueprint_path}/ws'
+        url = f"{self.blueprint_path}/ws"
         if self.namespace:
-            url = f'{url}/{self.namespace}'
+            url = f"{url}/{self.namespace}"
 
         async with self.app_test_client.websocket(url) as ws:
             _event = await ws.receive()
             _event = json.loads(_event)
-            assert _event.get('event') == '_open'
+            assert _event.get("event") == "_open"
 
             self._ready.set()
 
             while True:
                 _event = await ws.receive()
                 _event = json.loads(_event)
-                if _event.get('event') == '_token_expire':
+                if _event.get("event") == "_token_expire":
                     break
                 else:
                     await self.put(_event)
 
     def events(self, expected, timeout=5, namespace=None):
         return CaughtEvents(
-            catcher=self,
-            expected=expected,
-            timeout=timeout,
-            namespace=namespace
+            catcher=self, expected=expected, timeout=timeout, namespace=namespace
         )
 
 
@@ -140,7 +141,7 @@ class CaughtEvents:
         catcher: EventsCatcher,
         expected: int,
         namespace: Optional[str] = None,
-        timeout: int = 5
+        timeout: int = 5,
     ):
         self.catcher = catcher
         self.expected = expected
@@ -150,7 +151,7 @@ class CaughtEvents:
         self._events: List[Any] = list()
 
     def __repr__(self) -> str:
-        return f'{type(self).__name__} object events={self.event_names()}'
+        return f"{type(self).__name__} object events={self.event_names()}"
 
     def __len__(self) -> int:
         return len(self._events)
@@ -172,20 +173,18 @@ class CaughtEvents:
 
     def __del__(self):
         if not self._task.done():
-            warnings.warn(f'task for {type(self).__name__} is still running')
+            warnings.warn(f"task for {type(self).__name__} is still running")
 
     @ignore_cancelled_error
     async def run(self):
         self._events = list()
         async for _event in self.catcher.subscribe():
-            if (
-                _event.get('event') == '_open' or
-                (
-                    self.namespace and (
-                        _event.get('event') is None or
-                        _event.get('event') == '_open' or
-                        not _event['event'].startswith(self.namespace)
-                    )
+            if _event.get("event") == "_open" or (
+                self.namespace
+                and (
+                    _event.get("event") is None
+                    or _event.get("event") == "_open"
+                    or not _event["event"].startswith(self.namespace)
                 )
             ):
                 continue
@@ -194,7 +193,7 @@ class CaughtEvents:
                 break
 
     def event_names(self) -> List[str]:
-        return [event.get('event') for event in self._events]
+        return [event.get("event") for event in self._events]
 
     def assert_events(self, event_list: List[str]) -> None:
         assert event_list == self.event_names()
