@@ -8,7 +8,7 @@ import warnings
 from contextlib import asynccontextmanager
 
 import pytest
-
+import pytest_asyncio
 
 from asyncio_multisubscriber_queue import MultisubscriberQueue
 from typing import Any, AsyncGenerator, Iterator, List, Optional, TYPE_CHECKING
@@ -20,6 +20,11 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+
+@pytest.hookimpl(trylast=True)
+def teardownnnn():
+    print("tear it down!")
 
 
 def pytest_addoption(parser):
@@ -42,8 +47,7 @@ def ignore_cancelled_error(func):
     return wrapper
 
 
-@pytest.fixture(scope="session")
-@pytest.mark.asyncio
+@pytest_asyncio.fixture(scope="session")
 async def quart_events_catcher(
     app_test_client: TestClientProtocol, request: SubRequest
 ):
@@ -62,11 +66,6 @@ async def quart_events_catcher(
         namespace=_getini("quart_events_namespace", default=None),
     )
 
-    def teardown():
-        _catcher._stop.set()
-
-    request.addfinalizer(teardown)
-
     async with _catcher:
         yield _catcher
 
@@ -84,14 +83,12 @@ class EventsCatcher(MultisubscriberQueue):
         self.namespace = namespace
         self._task: Optional[asyncio.Task] = None
         self._ready: asyncio.Event = asyncio.Event()
-        self._stop: asyncio.Event = asyncio.Event()
 
     async def __aenter__(self):
         self._task = asyncio.create_task(self.run())
         return self
 
     async def __aexit__(self, *args, **kwargs):
-        await self._stop.wait()
         self._task.cancel()
         await self._task
 
@@ -101,6 +98,7 @@ class EventsCatcher(MultisubscriberQueue):
 
     @ignore_cancelled_error
     async def run(self):
+        logger.debug(f"authorizing events session via {self.blueprint_path}/auth")
         r = await self.app_test_client.get(f"{self.blueprint_path}/auth")
 
         if r.status_code != 200:
@@ -114,6 +112,7 @@ class EventsCatcher(MultisubscriberQueue):
         if self.namespace:
             url = f"{url}/{self.namespace}"
 
+        logger.debug(f"subscribing to events via {self.blueprint_path}/auth")
         async with self.app_test_client.websocket(url) as ws:
             _event = await ws.receive()
             _event = json.loads(_event)
