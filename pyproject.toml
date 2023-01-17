@@ -1,7 +1,7 @@
 [tool]
 [tool.poetry]
 name = "quart-events"
-version = "0.4.3-dev"
+version = "0.4.3"
 description = "aquart extension to facilitate event message brokering"
 authors = ["Kyle Smith <smithk86@gmail.com>"]
 license = "MIT"
@@ -16,14 +16,14 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.8"
-quart = "^0.16.2"
-asyncio-multisubscriber-queue = "^0.3.0"
+quart = "*"
+asyncio-multisubscriber-queue = "*"
 
-[tool.poetry.dev-dependencies]
-mypy = "^0.931"
-pytest = "^7.0.1"
-pytest-asyncio = "^0.18.2"
-pytest-mypy = "^0.9.1"
+[tool.poetry.group.dev.dependencies]
+mypy = "*"
+pytest = "*"
+pytest-asyncio = "*"
+pytest-mypy = "*"
 
 [tool.poetry.scripts]
 pytest = "pytest:main"
@@ -32,7 +32,7 @@ pytest = "pytest:main"
 pytest11 = { quart_events = "quart_events.pytest_plugin" }
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
